@@ -1,0 +1,107 @@
+---
+title: "A2. Extract Climate"
+format:
+  html:
+    theme: spacelab
+    toc: true
+    number-sections: true
+---
+
+```{r}
+# packages
+require("stringr")
+require("raster")
+library(tidyverse)
+```
+
+```{r}
+trees_df <- read_csv("~/Desktop/Prague/mort-likelihood/Data/full_trees_sp.csv")
+str(trees_df)        
+```
+
+```{r}
+plots <- trees_df %>%
+  select(plotid, lat, lng) %>%
+  distinct(., plotid, .keep_all = TRUE)
+```
+
+
+```{r}
+# climate variable list
+Vars <- c("pet","ppt","tmax","tmin","soil")
+
+# define dates
+dates <- seq(1958,2023,1)
+start_yr <- dates[1]
+end_yr <-dates[length(dates)]
+
+# netcdf layer names
+mo_year_names <- paste( str_pad(string = 1:12, width = 2, "left", 0),rep(start_yr:end_yr, each = 12), sep="_")
+```
+
+
+```{r}
+# loop through variables
+plot_clim_array <- array(list(NULL),dim=length(Vars))
+
+#index <- 1
+for(index in 1:length(Vars))
+{
+	clim_var <- Vars[index]
+		
+	# load monthly Terra files (names of layers not retained - need to re-define)
+	Terra_region <- stack(file.path(Dir.Clim, paste("1_TerraClimate",clim_var,"all_years_Region.nc",sep="_")))
+	
+	# define names = dates by month
+	names(Terra_region) <- mo_year_names
+
+	# Define plot dataframe as spatial object
+	if(index == 1){
+	  plots <- as.data.frame(plots)  # Convert tibble to data.frame
+	  coordinates(plots) <- ~ lng + lat
+	  proj4string(plots) <- crs(Terra_region)
+	}
+
+	# Extract bil values corresponding to plots (bilinear interpolation of 4 nearest cells)
+	rasValue = extract(Terra_region, plots, method="bilinear")
+	
+	# add extracted values to plot dataset
+	plot_clim <- cbind(plots[,names(plots)], rasValue)
+	head(plot_clim)
+	
+	# convert to long format
+	plot_clim_long <- reshape(plot_clim, direction = "long", varying = list(names(plot_clim)[4:length(plot_clim)]), v.names = clim_var, 
+		              idvar = c("plotid"), timevar = "period", times = mo_year_names)
+
+	# Add year and month columns
+	plot_clim_long$year <- as.numeric(substr(plot_clim_long$period, 4, 8))
+	plot_clim_long$month <- as.numeric(substr(plot_clim_long$period, 1, 2))
+	
+	# Define water year  (oct to sept)
+	plot_clim_long$Water_yr <- as.numeric((plot_clim_long$year)) 
+	is.nxt <-  as.numeric((plot_clim_long$month)) %in% 10:12
+	plot_clim_long$Water_yr[is.nxt] <- plot_clim_long$Water_yr[is.nxt]+1 
+
+	# Define seasonal periods (3 month periods within a water year)
+	plot_clim_long$Season = ifelse ((plot_clim_long$month == 12 | plot_clim_long$month == 1 | plot_clim_long$month == 2 ), "winter",      
+					          ifelse ((plot_clim_long$month == 3 | plot_clim_long$month == 4 | plot_clim_long$month == 5), "spring",                 
+					           ifelse ((plot_clim_long$month == 6 | plot_clim_long$month == 7 | plot_clim_long$month == 8 ), "summer",
+							    "fall")))
+	# combine variables
+	if(index == 1) 
+	{
+	    plot_clim_array <- plot_clim_long
+	}else{
+	    plot_clim_array <- merge(plot_clim_array, plot_clim_long, by=c("plotid","lng","lat","period","year","month","Season","Water_yr"))
+	}
+}
+
+colnames(plot_clim_array)[names(plot_clim_array) %in% "soil"] <- "soil_mm"
+plot_clim_array <- droplevels(plot_clim_array)
+summary(plot_clim_array)
+str(plot_clim_array)
+length(unique(plot_clim_array$plotid))
+
+check <- unique(plot_clim_array[, names(plot_clim_array) %in% c("plotid","year")])
+which(duplicated(check))
+```
