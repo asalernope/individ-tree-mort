@@ -1,0 +1,99 @@
+---
+title: "05. Combine Model datasets"
+format:
+  html:
+    theme: spacelab
+    toc: true
+    number-sections: true
+---
+
+  Combine tree, climate, N deposition and disturbance datasets
+  Add variable for time since max and most recent disturbances
+
+```{r}
+rm(list=ls())
+
+#  set user computer
+computer <- "~"
+
+#  directores
+if(computer == "~"){
+  Dir.Base <- "~/Desktop/Prague/mort-likelihood"
+}else{
+  Dir.Base <- "insert path"
+}
+Dir.Data <- file.path(Dir.Base, "Data")
+Dir.Code <- file.path(Dir.Base, "Code")
+Dir.Clim <- file.path(Dir.Data,"Climate")
+Dir.Dist <- file.path(Dir.Data,"Disturbance")
+
+Dir_list <- c(Dir.Base, Dir.Data, Dir.Code, Dir.Clim, Dir.Dist)
+
+for(index in 1:length(Dir_list))   # using loop instead of sapply
+{  Dir_sel <- Dir_list[index]   # select directories one by one
+   if(!dir.exists(Dir_sel)) { dir.create(Dir_sel) }
+}
+```
+
+
+```{r}
+### get tree plot data
+load("~/Desktop/Prague/mort-likelihood/Data/8_Trees_with_mortality.Rdata")
+targets$plotid <- as.factor(targets$plotid)
+str(targets)  # n=198 plotids
+```
+
+
+```{r}
+### load climate
+clim_df <- load(file=file.path(Dir.Clim,"6_plot_mean_census_climate.Rdata"))
+clim_df <- get(clim_df)
+str(clim_df)  # n=198 plotids
+```
+
+# ### get N deposition
+# load(file=file.path(Dir.Data, "7_plot_mean_census_nitrogen_deposition_v2.Rdata"))
+# str(plot_Ndep)   # n=198 plotids
+
+```{r}
+### load disturbance history variables (revised version)
+#  max severity and timing, recent severity and timing, number of peaks, and mean decadal disturbance
+Dist <- read.csv(file=file.path(Dir.Data,"Disturbance.csv"))
+Dist$plotid <- as.factor(Dist$plotid)
+str(Dist)   # n=207 plotids
+
+
+####### check for missing data
+dist_plots <- levels(Dist$plotid)
+target_plots <- levels(targets$plotid)
+```
+
+```{r}
+setdiff(dist_plots,target_plots)
+#  [1] "CRO_RIS_009_1" "CRO_RIS_009_2" "CRO_RIS_010_1" "CRO_RIS_010_2" "CRO_RIS_011_1"
+#  [6] "CRO_RIS_011_2" "CRO_RIS_015_1" "CRO_RIS_015_2" "CRO_RIS_016_1" "CRO_RIS_016_2"
+# [11] "CRO_RIS_017_1" "CRO_RIS_017_2" "CRO_RIS_022_2"
+
+setdiff(target_plots,dist_plots)
+#[1] "BOS_PER_202_2" "BUL_STE_487_2" "BUL_STE_488_1" "CRO_RIE_092_2"
+```
+
+```{r}
+### merge datasets
+Dist <- Dist[,!names(Dist) %in% "stand"]
+
+trees = Reduce(function(x,y) {merge(x,y, by=c("plotid"),all.x=T)}, 
+               list(targets, clim_df, Dist) )
+
+
+# add variables for time since disturbance
+trees$time_since_dist_max <- trees$date_census_1 - trees$my_max_year
+trees$time_since_dist_recent <- trees$date_census_1 - trees$my_rec_year
+```
+
+```{r}
+# save
+save(trees, file=file.path(Dir.Data,"9_Trees_with_derived_climate_variables.Rdata"))
+```
+
+

@@ -1,0 +1,177 @@
+---
+title: "06. Plot Buffer for Neighborhood Competition"
+format:
+  html:
+    theme: spacelab
+    toc: true
+    number-sections: true
+---
+
+# Setup
+
+```{r}
+rm(list = ls())
+
+# Set user path
+computer <- "~"
+
+# Set directories
+if (computer == "~") {
+  Dir.Base <- "~/Desktop/Prague/mort-likelihood"
+} else {
+  Dir.Base <- "insert path"
+}
+
+Dir.Data <- file.path(Dir.Base, "Data")
+Dir.Code <- file.path(Dir.Base, "Code")
+Dir.Clim <- file.path(Dir.Data, "Climate")
+Dir.Dist <- file.path(Dir.Data, "Disturbance")
+Dir.Out <- file.path(Dir.Base, "Annealing_output")
+Dir.Ndep <- file.path(Dir.Data, "Ndep")
+dirs <- sapply(c(Dir.Base, Dir.Data, Dir.Code, Dir.Clim, Dir.Dist, Dir.Ndep, Dir.Out), function(x) if (!dir.exists(x)) dir.create(x))
+
+```
+
+```{r}
+install.load.package <- function(x) {
+  if (!require(x, character.only = TRUE)) {
+    install.packages(x, repos = "http://cran.us.r-project.org")
+  }
+  require(x, character.only = TRUE)
+}
+
+sapply(c("RPostgreSQL", "pool", "tidyverse"), install.load.package)
+```
+
+
+```{r}
+# Distance function
+neighdist <- function(targetx, targety, neighborx, neighbory) {
+  sqrt((targetx - neighborx)^2 + (targety - neighbory)^2)
+}
+
+# Load neighbor tree data
+neighbours_df <- load(file.path(Dir.Data, "full_trees_comp.Rdata"))
+neighbours_df <- get(neighbours_df)
+neighbours_df$plotid <- as.factor(neighbours_df$plotid)
+
+# Read species table
+spp_table <- read_csv(file.path(Dir.Data, "Species_table.csv"))
+spp_table <- spp_table[, !names(spp_table) %in% c("Genus_nam", "Species_nam", "functional.grp", "sp_type")]
+
+# Add species code
+neighbours_df <- merge(neighbours_df, spp_table, by = "species", all.x = TRUE)
+neighbours_df$SPCD <- as.factor(neighbours_df$SPCD)
+
+# Calculate distance to plot center
+neighbours_df$DIST_m <- neighdist(neighbours_df$x_m, neighbours_df$y_m, 0, 0)
+
+# Convert DBH to cm
+neighbours_df$dbh_cm <- neighbours_df$dbh_mm / 10
+neighbours_df <- neighbours_df[, !names(neighbours_df) %in% "dbh_mm"]
+```
+
+```{r}
+# Connect to database
+KELuser <- dbPool(
+  RPostgreSQL::PostgreSQL(),
+  dbname = "remoteforestsorg",
+  host = "91.239.201.14",
+  port = 4010,
+  user = "remoteforests002",
+  password = "COVBtxQ5"
+)
+
+# Get plot size info
+plotids <- unique(neighbours_df$plotid)
+
+plots <- tbl(KELuser, "plot") %>%
+  filter(census == 1, plotid %in% plotids) %>%
+  collect() %>%
+  select(date, plotid, plotsize)
+
+plots$plotid <- as.factor(plots$plotid)
+
+# Merge with tree data
+neighbours_df <- merge(neighbours_df, plots[, -1], by = "plotid", all.x = TRUE)
+```
+
+
+```{r}
+pb <- txtProgressBar(min = 0, max = length(unique(neighbours_df$plotid)), style = 3)
+tind <- 0
+seed_no <- 0
+
+plot_list <- levels(neighbours_df$plotid)
+dat_array <- array(data = list(NULL), dim = length(plot_list))
+
+for (i in seq_along(plot_list)) {
+  seed_no <- seed_no + 1
+  tind <- tind + 1
+  setTxtProgressBar(pb, tind)
+
+  plot <- plot_list[i]
+  trees_sim <- neighbours_df[neighbours_df$plotid == plot, ]
+  trees_sim$treeid <- paste0(trees_sim$treeid, "_sim")
+
+  Rmin <- unique(round(sqrt(trees_sim$plotsize / pi), 2))
+  Rmax <- unique(round(sqrt(trees_sim$plotsize * 3 / pi), 2))
+
+  set.seed(20 + seed_no)
+  trees_sim$radius <- runif(nrow(trees_sim), min = Rmin, max = Rmax)
+  trees_sim$angle_rad <- runif(nrow(trees_sim), min = 0.001, max = 2 * pi)
+
+  trees_sim$x_m_ran <- trees_sim$radius * sin(trees_sim$angle_rad)
+  trees_sim$y_m_ran <- trees_sim$radius * cos(trees_sim$angle_rad)
+
+  trees_sim$DIST_m <- neighdist(trees_sim$x_m_ran, trees_sim$y_m_ran, 0, 0)
+
+  dat_array[[i]] <- trees_sim
+}
+
+sim_neighbours <- do.call(rbind, dat_array)
+```
+
+
+```{r}
+summary(sim_neighbours)
+
+length(unique(sim_neighbours$plotid))  # 212
+length(unique(neighbours_df$plotid))   # 212
+length(unique(sim_neighbours$treeid))  # 15808
+length(unique(neighbours_df$treeid))   # 15808
+
+set.seed(42)
+plot_list_sample <- sample(sim_neighbours$plotid, 16)
+
+if (computer == "~") {
+  quartz(height = 8, width = 10)
+} else {
+  windows(height = 8, width = 10)
+}
+
+ par(mfrow = c(4, 4), mar = c(2, 2, 2, 1), oma = c(1, 2, 2, 1))
+
+for (index in 1:16) {
+  plotid <- plot_list_sample[index]
+  plot(y_m_ran ~ x_m_ran, data = sim_neighbours[sim_neighbours$plotid == plotid, ], col = "gray")
+  points(y_m ~ x_m, data = neighbours_df[neighbours_df$plotid == plotid, ], col = "blue")
+}
+```
+
+```{r}
+sim_neighbours$x_m <- sim_neighbours$x_m_ran
+sim_neighbours$y_m <- sim_neighbours$y_m_ran
+sim_neighbours <- sim_neighbours[, !names(sim_neighbours) %in% c("x_m_ran", "y_m_ran", "radius", "angle_rad")]
+
+sim_neighbours$tree_type <- "buffer"
+neighbours_df$tree_type <- neighbours_df$treetype
+
+neighbours_df <- rbind(neighbours_df, sim_neighbours)
+neighbours_df <- neighbours_df[order(neighbours_df$plotid, neighbours_df$treeid), ]
+
+# Save output
+save(neighbours_df, file = file.path(Dir.Data, "10_Neighbour_tree_files.Rdata"))
+```
+
+
