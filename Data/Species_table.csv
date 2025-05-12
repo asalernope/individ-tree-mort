@@ -1,0 +1,84 @@
+"","species","sp_type","Genus_nam","Species_nam","SPCD","wood_density_gcm3_Forrester","wood_density_zanne_2009_gcm3","wood_density_gcm3","SLA_cm2g_mean"
+"1","99","99",NA,"",NA,NA,NA,NA,NA
+"2","Abies","coniferous","Abies","","ABIES",NA,NA,NA,NA
+"3","Abies alba","coniferous","Abies","alba","ABIALB",0.35301,0.353,0.353,90.84
+"4","Acer","broadleaved","Acer","","ACER",NA,0.515125,0.515,207.27
+"5","Acer campestre","broadleaved","Acer","campestre","ACECAM",NA,0.525,0.525,NA
+"6","Acer heldreichii","broadleaved","Acer","heldreichii","ACEHEL",NA,NA,NA,NA
+"7","Acer monspessulanum","broadleaved","Acer","monspessulanum","ACEMON",NA,NA,NA,NA
+"8","Acer obtusatum","broadleaved","Acer","obtusatum","ACEOBT",0.51,NA,0.51,196.3
+"9","Acer obtusifolium","broadleaved","Acer","obtusifolium","ACEOBFO",NA,NA,NA,NA
+"10","Acer platanoides","broadleaved","Acer","platanoides","ACEPLA",0.51,0.5165,0.516,241
+"11","Acer pseudoplatanus","broadleaved","Acer","pseudoplatanus","ACEPSE",0.50799,0.509,0.509,184.49
+"12","Alnus","broadleaved","Alnus","","ALNUS",NA,NA,NA,NA
+"13","Alnus glutinosa","broadleaved","Alnus","glutinosa","ALNGLU",0.43911,0.439,0.439,158.55
+"14","Alnus viridis","broadleaved","Alnus","viridis","ALNVIR",NA,NA,NA,NA
+"15","Betula","broadleaved","Betula","","BETULA",0.52521,NA,0.525,NA
+"16","Betula pendula","broadleaved","Betula","pendula","BETPEN",0.52521,0.525,0.525,133.83
+"17","Broadleaves","broadleaved","Broadleaves","","ANGIO",NA,NA,NA,NA
+"18","Carpinus betulus","broadleaved","Carpinus","betulus","CARBET",0.693105,0.693,0.693,198.25
+"19","Clematis vitalba","broadleaved","Clematis","vitalba","CLEVIT",NA,NA,NA,NA
+"20","Coniferous","coniferous","Coniferous","","GYMNO",NA,NA,NA,NA
+"21","Cornus mas","broadleaved","Cornus","mas","CORMAS",NA,NA,NA,NA
+"22","Corylus","broadleaved","Corylus","","CORYLUS",NA,NA,NA,NA
+"23","Corylus avellana","broadleaved","Corylus","avellana","CORAVE",NA,0.517,0.517,321
+"24","Cotinus coggygria","broadleaved","Cotinus","coggygria","COTCOG",NA,NA,NA,NA
+"25","Crataegus","broadleaved","Crataegus","","CRATAEGUS",NA,NA,NA,NA
+"26","Crataegus monogyna","broadleaved","Crataegus","monogyna","CRAMON",NA,NA,NA,NA
+"27","Daphne","broadleaved","Daphne","","DAPHNE",NA,NA,NA,NA
+"28","Daphne mezereum","broadleaved","Daphne","mezereum","DAPMEZ",NA,NA,NA,NA
+"29","Euonymus europaeus","broadleaved","Euonymus","europaeus","EUOEUR",NA,0.603,0.603,NA
+"30","Fagus sylvatica","broadleaved","Fagus","sylvatica","FAGSYL",0.58548,0.585,0.585,215.37
+"31","Fraxinus","broadleaved","Fraxinus","","FRAXINUS",NA,0.5525,0.552,172.9
+"32","Fraxinus excelsior","broadleaved","Fraxinus","excelsior","FRAEXC",0.55965,0.56,0.56,170.76
+"33","Fraxinus ornus","broadleaved","Fraxinus","ornus","FRAORN",NA,0.545,0.545,175
+"34","Hedera helix","broadleaved","Hedera","helix","HEDHEL",NA,NA,NA,NA
+"35","Juniperus communis","coniferous","Juniperus","communis","JUNCOM",NA,0.517,0.517,NA
+"36","Laburnum","broadleaved","Laburnum","","LABURNUM",NA,NA,NA,NA
+"37","Laburnum anagyroides","broadleaved","Laburnum","anagyroides","LABANA",NA,0.5248047,0.525,305.13
+"38","Larix decidua","coniferous","Larix","decidua","LARDEC",0.47355,0.474,0.474,121.83
+"39","Lians","broadleaved","Lians","","LIANS",NA,0.5248047,0.525,NA
+"40","Lonicera","broadleaved","Lonicera","","LONICERA",NA,NA,NA,NA
+"41","Lonicera nigra","broadleaved","Lonicera","nigra","LONNIG",NA,NA,NA,NA
+"42","Malus sylvestris","broadleaved","Malus","sylvestris","MALSYL",NA,0.577,0.577,NA
+"43","Ostrya carpinifolia","broadleaved","Ostrya","carpinifolia","OSTCAR",NA,0.653,0.653,255
+"44","Picea abies","coniferous","Picea","abies","PICABI",0.37023,0.37,0.37,56.97
+"45","Pinus cembra","coniferous","Pinus","cembra","PINCEM",0.417010333333333,NA,0.417,46.04
+"46","Pinus mugo","coniferous","Pinus","mugo","PINMUG",NA,NA,NA,NA
+"47","Pinus nigra","coniferous","Pinus","nigra","PINNIG",0.4170705,0.417,0.417,NA
+"48","Pinus peuce","coniferous","Pinus","peuce","PINPEU",NA,NA,NA,NA
+"49","Pinus strobus","coniferous","Pinus","strobus","PINSTR",NA,NA,NA,NA
+"50","Pinus sylvestris","coniferous","Pinus","sylvestris","PINSYL",0.42189,0.422,0.422,42.92
+"51","Populus","broadleaved","Populus","","POPULUS",0.374,NA,0.374,NA
+"52","Populus alba","broadleaved","Populus","alba","POPALB",0.374,0.353,0.353,NA
+"53","Populus tremula","broadleaved","Populus","tremula","POPTRE",0.374,0.387,0.387,98.35
+"54","Prunus avium","broadleaved","Prunus","avium","PRUAVI",0.47355,0.474,0.474,124.34
+"55","Prunus spinosa","broadleaved","Prunus","spinosa","PRUSPI",NA,NA,NA,NA
+"56","Pyrus pyraster","broadleaved","Pyrus","pyraster","PYRPYR",NA,NA,NA,NA
+"57","Quercus","broadleaved","Quercus","","QUERCUS",0.55965,NA,0.56,NA
+"58","Quercus cerris","broadleaved","Quercus","cerris","QUECER",NA,0.5598833,0.56,148
+"59","Quercus petraea","broadleaved","Quercus","petraea","QUEPET",0.55965,0.56,0.56,117.31
+"60","Quercus pubescens","broadleaved","Quercus","pubescens","QUEPUB",NA,NA,NA,NA
+"61","Quercus robur","broadleaved","Quercus","robur","QUEROB",0.55965,0.56,0.56,157.92
+"62","Rhamnus","broadleaved","Rhamnus","","RHAMNUS",NA,0.611,0.611,167.96
+"63","Rhamnus cathartica","broadleaved","Rhamnus","cathartica","RHACAT",NA,0.611,0.611,NA
+"64","Rhamnus fallax","broadleaved","Rhamnus","fallax","RHAFAL",NA,NA,NA,NA
+"65","Ribes alpinum","broadleaved","Ribes","alpinum","RIBALP",NA,NA,NA,NA
+"66","Salix","broadleaved","Salix","","SALIX",NA,0.404,0.404,109
+"67","Salix caprea","broadleaved","Salix","caprea","SALCAP",NA,0.396,0.396,164
+"68","Salix nigra","broadleaved","Salix","nigra","SALNIG",NA,NA,NA,NA
+"69","Sambucus","broadleaved","Sambucus","","SAMBUCUS",NA,0.454,0.454,167.96
+"70","Sambucus nigra","broadleaved","Sambucus","nigra","SAMNIG",NA,0.454,0.454,167.96
+"71","Sambucus racemosa","broadleaved","Sambucus","racemosa","SAMRAC",NA,NA,NA,NA
+"72","Sorbus","broadleaved","Sorbus","","SORBUS",NA,NA,NA,NA
+"73","Sorbus aria","broadleaved","Sorbus","aria","SORARI",NA,0.6415,0.641,131
+"74","Sorbus aucuparia","broadleaved","Sorbus","aucuparia","SORAUC",0.62853,0.629,0.629,112
+"75","Sorbus torminalis","broadleaved","Sorbus","torminalis","SORTOR",NA,0.611,0.611,NA
+"76","Spirea media","broadleaved","Spirea","media","SPIMED",NA,NA,NA,NA
+"77","Taxus baccata","coniferous","Taxus","baccata","TAXBAC",NA,0.551,0.551,97
+"78","Tilia","broadleaved","Tilia","","TILIA",0.42189,0.4219633,0.422,221.07
+"79","Tilia cordata","broadleaved","Tilia","cordata","TILCOR",0.42189,0.422,0.422,227.84
+"80","Tilia platyphyllos","broadleaved","Tilia","platyphyllos","TILPLA",NA,0.422,0.422,194
+"81","Ulmus","broadleaved","Ulmus","","ULMUS",NA,0.534,0.534,103.4
+"82","Ulmus glabra","broadleaved","Ulmus","glabra","ULMGLA",NA,0.551,0.551,94.5
+"83","Ulmus laevis","broadleaved","Ulmus","laevis","ULMLAE",NA,0.551,0.551,98.95
