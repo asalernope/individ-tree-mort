@@ -1,0 +1,163 @@
+---
+title: "Plot level variables for model"
+format:
+  html:
+    theme: spacelab
+    toc: true
+    number-sections: true
+---
+
+**All trees present in census 1 and 2**
+```{r}
+librarian::shelf(lme4, dplyr, tidyverse, ggplot2, nlme, car, sjPlot, GGally,DHARMa,pROC, glmmTMB, pool)
+
+full_trees <- read_csv("data/full_trees_dist.csv")
+```
+
+# Plot age
+### ID pull
+
+```{r}
+# Connect to the database
+KELuser <- dbPool(RPostgreSQL::PostgreSQL(),
+                    dbname = 'remoteforestsorg',
+                  host = '91.239.201.14',
+                  port = 4010,
+                  user = 'remoteforests002',
+                  password = 'COVBtxQ5')
+```
+
+#### First-census plot_id
+
+```{r}
+plot.id.1 <- tbl(KELuser, "plot") %>%
+  filter(ownership %in% 1,
+          country %in% c("Albania", "Bosnia","Croatia","Bulgaria", "Romania"),
+         foresttype %in% c("beech"),
+        plottype %in% c(3, 4),
+         census %in% 1,
+         !is.na(lng),
+         !is.na(lat)) %>%
+ filter(!location %in% c("Fagaras", "Maramures")) %>%
+pull(id)
+
+plot.id.collect <- tbl(KELuser, "plot") %>%
+  filter(ownership %in% 1,
+          country %in% c("Albania", "Bosnia","Croatia","Bulgaria", "Romania"),
+         foresttype %in% c("beech"),
+        plottype %in% c(3, 4),
+         census %in% 1,
+         !is.na(lng),
+         !is.na(lat)) %>%
+ filter(!location %in% c("Fagaras", "Maramures")) %>%
+  select(plotid, plotsize) %>%
+collect()
+```
+
+#### Tree ID
+
+```{r}
+tree.id <- full_trees %>%
+  filter(dbh_mm >= 60,
+         treetype %in% "0" & onplot %in% c(1, 2, 3) | treetype %in% c("m", "x"),
+         !species %in% c("Lians")) %>%
+  pull(tree_id)
+```
+
+#### Core ID
+
+```{r}
+core.id <- tbl(KELuser, "core") %>%
+  filter(coretype %in% c(1),
+         !is.na(missing_mm),
+         !is.na(missing_years),
+        !crossdated %in% c(12, 20:22, 99),
+         missing_mm < 30,
+         missing_years < 30) %>%
+  pull(id)
+```
+
+:::
+
+# Calculate Plot Ages
+
+::: panel-tabset
+
+## Age data - live trees
+
+```{r}
+data.age <- tbl(KELuser, "ring") %>%
+  inner_join(., tbl(KELuser, "core") %>%
+               filter(id %in% core.id),
+             by = c("core_id" = "id")) %>%
+   collect() %>% 
+  inner_join(., full_trees %>% filter(tree_id %in% tree.id), by = "tree_id") %>%
+  select(date, location, stand, plotid, treeid, dbh_mm, missing_mm, sp_group_dist, growth, missing_years, year, incr_mm) %>%
+  collect() %>%
+  arrange(date, location, stand, plotid, treeid, year) %>%
+  group_by(location, stand, date, plotid, sp_group_dist, treeid) %>%
+  reframe(age = date - min(year) + missing_years + 1,
+         count = n(),
+         recruit = date-age) %>%
+  ungroup() %>%
+  distinct(., treeid, .keep_all = TRUE)
+```
+
+## All tree age
+
+```{r}
+age_tree_all <- data.age %>%
+    group_by(plotid) %>%
+ reframe(age_90quantile = quantile(age, .90),
+              age_mean = mean(age),
+              age_max = max(age), 
+              age_coefvar = sd(age)/mean(age),
+              n_trees_age_all = n())
+```
+
+
+```{r}
+trees_ba <-  full_trees %>%
+  filter(!onplot %in% 0) %>%
+#  inner_join(.,plot.id.collect, by = "plotid") %>%
+   filter(
+    lord1 %in% "live")%>%
+  #        !stand %in% c("Risnjak")) %>%
+  mutate(ba_m2 = pi * (dbh_mm/20)^2) %>%
+  group_by(plotid) %>%
+  mutate(plot_ba = sum(ba_m2),
+         mean_tree_ba = mean(ba_m2),
+         coefvar = mean(dbh_mm)/sd(dbh_mm)) %>%
+     #    tree_density = n()/plotsize*10000)   %>%
+  ungroup() %>%
+  select(plotid, treeid, sp_group_dist, ba_m2, plot_ba, mean_tree_ba, coefvar, aspect, slope, altitude_m #tree_density,
+         )  %>%
+  mutate(
+         aspect_beers = 1+cos(45-aspect),
+         prod = ifelse((aspect > 90 & aspect <= 270), 'south', 'north'))
+  
+#cor(trees_ba$tree_density, trees_ba$plot_ba)
+
+unique(trees$stand)
+  
+sp_ba <- trees_ba %>%
+  group_by(plotid, sp_group_dist) %>%
+  summarise(sp_plot = sum(ba_m2)) %>%
+  ungroup() %>%
+  group_by(plotid) %>%
+  mutate(plot_ba = sum(sp_plot)) %>%
+  ungroup() %>%
+ mutate(sp_prop = sp_plot/plot_ba) %>%
+  select(-sp_plot, -plot_ba) %>%
+  pivot_wider(names_from = sp_group_dist, values_from = sp_prop) %>%
+    replace(is.na(.), 0)
+
+
+trees_ba_calc <- trees_ba %>%
+  inner_join(., sp_ba, by = "plotid") %>%
+ #inner_join(., age_tree_all %>% select(age_90quantile,plotid), by = "plotid") %>%
+  select(-sp_group_dist)
+  
+
+```
+

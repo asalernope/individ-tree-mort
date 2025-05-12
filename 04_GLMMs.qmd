@@ -1,0 +1,479 @@
+---
+title: "GLMER Model Attempt"
+format:
+  html:
+    theme: spacelab
+    toc: true
+    number-sections: true
+---
+
+# Overview
+
+This is a simpler modeling approach for individual tree mortality in the Balkan Region. This utilizes the data put together from Arne and I. The goal is to understand the relationship of individual mortality to size, species, competition, climate, and disturbance history. To achieve this goal, trees and plots with evidence of catastrophic or large scale disturbance are excluded. This excludes trees from blow downs as noted in the database tree status (13,14) and ice mortality (21,22). 
+
+*Libraries*
+```{r}
+librarian::shelf(lme4, dplyr, tidyverse, ggplot2, car, sjPlot, GGally,DHARMa,pROC, glmmTMB, mgcv)
+```
+
+*Data*
+```{r}
+#load("~/Desktop/Prague/mort-likelihood/Data/9_Full_model_fitting_dataset.Rdata")
+ load("~/Desktop/Prague/mort-likelihood/Data/9_Trees_with_derived_climate_variables.Rdata")
+
+load("~/Desktop/Prague/mort-likelihood/Data/Climate/TRY_climate_anom.Rdata")
+
+
+trees <- trees %>% 
+  inner_join(., clim_anom, by = "plotid") 
+
+```
+
+
+```{r}
+install.packages(c("dagitty", "ggdag"))
+library(ggdag)
+
+dag <- dagify(
+  mortality ~ competition + climate_anomaly + canopy_stat + site,
+  competition ~ canopy_stat + site,
+  climate_anomaly ~ canopy_stat+site,
+  exposure = "climate_anomaly",
+  outcome = "mortality"
+)
+
+ggdag(dag, layout = "circle") +
+  theme_minimal()
+```
+
+
+*Additional calculations*
+
+Below is the calculation for plot level basal area (corrected for plot size), a measure indicative of plot development, and relative basal area of the individual compared to the mean basal area of trees within a plot, a measure of size dominance. Dominance of plot level species is also calculated on a basal area measure. For additional information on these calculations check Taccoen et al. (2021).
+
+Additionally, following the climate evolution variable in Taccoen et al. 2021, we will also calculate a evolving climate variable for temperature (mean seasonal) and for climatic water balance. 
+```{r}
+trees_ba <-trees %>%
+  # filter(
+  # ##  !tree_status_census_2 %in% c(14,13),
+  #        !stand %in% c("Risnjak")) %>% 
+  mutate(ba_m2 = pi * (dbh_mm/20)^2) %>%
+  group_by(plotid) %>%
+  mutate(plot_ba = sum(ba_m2),
+         mean_tree_ba = mean(ba_m2),
+         coefvar = mean(dbh_mm)/sd(dbh_mm)) %>%
+  ungroup() %>%
+  mutate(relCirc = ba_m2/mean_tree_ba) #%>%
+
+trees_ba %>%
+  filter(!treeid %in% trees$treeid)
+
+unique(trees$stand)
+  
+sp_ba <- trees_ba %>%
+  group_by(plotid, sp_group_dist) %>%
+  summarise(sp_plot = sum(ba_m2)) %>%
+  ungroup() %>%
+  group_by(plotid) %>%
+  mutate(plot_ba = sum(sp_plot)) %>%
+  ungroup() %>%
+ mutate(sp_prop = sp_plot/plot_ba) %>%
+  select(-sp_plot, -plot_ba) %>%
+  pivot_wider(names_from = sp_group_dist, values_from = sp_prop) %>%
+    replace(is.na(.), 0)
+# 
+# trees_new <- trees_ba %>%
+#   inner_join(., sp_ba, by = "plotid") %>%
+#  inner_join(., age_tree_all %>% select(age_90quantile,plotid), by = "plotid") %>%
+#   
+trees_new <- trees %>% 
+  inner_join(trees_ba_calc, by = c("treeid", "plotid")) %>%
+    mutate(
+    mort = ifelse(mort %in% 1, 0, 1))
+
+```
+
+# Modeling strategy
+
+I am following similar approaches as those laid out in BLANK, BLANK, BLANK. 
+First I will compare the fit and residuals of logistic regression using 'lme4' function GLMER using separate link functions. I believe the 'cloglog' link is more suitable for the data as there is a high imbalance in data between mortality and life with mortality being a more rare occurrence in the data. 
+
+```{r}
+ggpairs(data = (trees %>%
+          select(dbh_mm, census_yrs, temp_k_mean_ann_int,
+              WD_mm_mean_ann_int, stratum, sp_group_dist, mort, altitude_m)), aes(color = as.factor(mort), alpha = 0.6))
+```
+# All Species Model Attempt
+
+```{r}
+
+
+all_mod <- glmmTMB(mort ~ scale(dbh_cm)*as.factor(growth)+scale(temp_k_summer_diff) +
+                scale(size_ratio) + scale(time_since_dist_recent)  + 
+                scale(WB_mm_mean_summer_diff) +  offset(log(census_yrs)) + (1|plotid),
+               family = binomial(link = "cloglog"),
+               data = (trees_new))
+
+
+all_mod <- glmmTMB(mort ~ scale(dbh_mm)*growth +scale(temp_k_ann_diff) +
+              #  scale(Fagus) + scale(Picea)  + 
+                scale(WB_mm_mean_summer_diff) + scale(plot_ba)+ scale(relCirc)+ offset(log(census_yrs)) + scale(time_since_dist_recent)+scale(my_rec_sev)+(1|plotid),
+               family = binomial(link = "cloglog"),
+               data = trees_FAGUS)
+
+summary(all_mod)
+
+trees$predicted_prob <- predict(all_mod, type = "response")
+
+roc_obj <- roc(trees$mort, trees$predicted_prob)
+auc(roc_obj)
+ plot(roc_obj)
+ 
+ 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# The panel model 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+fe_mod <-  feols(log(value+0.01) ~ tmax * ppt + year | tree_id,
+                 data= paneldat, cluster = ~ plot_id_needle)
+
+summary(fe_mod)
+
+
+tab_model(fe_mod, digits=4, show.ci = F, show.se = T)
+
+
+
+```
+
+
+## Fagus
+
+::: panel-tabset
+
+### Upper Canopy
+
+```{r}
+trees_FAGUS_up <- trees_new %>%
+  filter(sp_group_dist %in% "Fagus",
+       stratum %in% "upper")
+     #  !location %in% c("Stara planina","Semenic" ))
+
+ggplot(trees)+
+  geom_density(aes(x = def_Evo, color = as.factor(mort)))
+
+
+ggplot(trees)+
+  geom_point(aes(y = dbh_mm, x = plot_ba, color = as.factor(mort)), alpha = 0.5)+
+  facet_wrap(~growth)+
+  theme_bw()
+```
+
+**Model comparison**
+
+ppt_mm
+```{r}
+ggplot(trees_FAGUS_up)+
+  geom_point(aes(x=(def_Evo), y=mort))
+
+
+
+fagus_mod_null <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+scale(plot_ba)+offset(log(census_yrs))  + (1|stand),
+               family = binomial(link = "cloglog"),
+               data = trees_FAGUS_up)
+
+fagus_mod_clim <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+scale(plot_ba)+scale(WD_mm_mean_seas_int)+offset(log(census_yrs))  +
+                            (WD_mm_mean_seas_int|),
+               family = binomial(link = "cloglog"),
+               data = trees_FAGUS_up)
+
+
+anova(fagus_mod_null,fagus_mod_clim)
+Anova(fagus_mod_clim)
+
+
+gam_mod <- gam(
+  mort ~ s(dbh_mm) + 
+    s(def_Evo),
+ offset(log(census_yrs)),
+  data = trees_FAGUS_up,
+  family = binomial(link = "cloglog")
+)
+summary(gam_mod)
+
+
+
+cor(trees_FAGUS_up$def_anom, trees_FAGUS_up$def_Evo)
+```
+
+
+
+```{r}
+fagus_mod_null <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+scale(plot_ba)+offset(log(census_yrs)) + (1|plotid),
+               family = binomial(link = "cloglog"),
+               data = trees_FAGUS_up)
+
+fagus_mod_up <- glmmTMB(mort ~ scale(poly(ba_m2,2))+scale(plot_ba)*scale(WD_mm_mean_ann_int)+ scale(Fagus)+scale(Picea)  + scale(Abies) + scale(coefvar) +offset(log(census_yrs)) +(1|plotid),
+               family = binomial(link = "cloglog"),
+               data = trees_FAGUS_up)
+
+
+library(mgcv)
+
+
+
+
+
+anova(fagus_mod_null,fagus_mod_up)
+
+fagus_mod_up1 <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+scale(temp_k_mean_ann_int)*scale(ppt_mm_ann_int)+
+              offset(log(census_yrs)),
+               family = binomial(link = "cloglog"),
+               data = trees_FAGUS_up)
+
+
+fagus_mod_up2 <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+scale(temp_k_mean_seas_int)*scale(ppt_mm_seas_int)+
+                scale(Fagus)+scale(Picea)  + scale(Abies) + scale(coefvar) +
+               scale(plot_ba)+ offset(log(census_yrs)) +(1|plotid),
+               family = binomial(link = "cloglog"),
+               data = trees_FAGUS_up)
+
+summary(fagus_mod_up)
+
+fagus_mod_null_gam <- gam(
+  mort ~ s(dbh_mm, k = 5) +
+         s(plot_ba, k = 5) +
+        s(WD_mm_mean_ann_int, k = 5) +
+         offset(log(census_yrs)) +
+         # s(stand, bs = "re") +
+         s(plotid, bs = "re"),
+  family = binomial(link = "cloglog"),
+  data = trees_FAGUS_up
+)
+
+
+cor(trees$terra_WD_mm_mean_seas_int, trees$temp_k_mean_seas_int)
+   # scale(Fagus)+scale(Picea)  + scale(Abies) + scale(coefvar) + scale(relCirc)+
+   #             scale(plot_ba)+
+
+anova(fagus_mod_null,fagus_mod_up1,fagus_mod_up,fagus_mod_up2)
+summary(fagus_mod_up2)
+
+sim_res <- testOutliers(fagus_mod_up1, type = 'bootstrap')
+plot(sim_res)
+
+plotResiduals(sim_res, trees_FAGUS_up$temp_k_mean_ann_int)
+plotResiduals(sim_res, trees_FAGUS_up$plot_ba)
+plotResiduals(sim_res, trees_FAGUS_up$ppt_mm_ann_int)
+plotResiduals(sim_res, trees_FAGUS_up$dbh_mm)
+
+plotResiduals(sim_res,quantreg = T)
+
+
+
+# Calculate overdispersion statistic
+overdisp_fun <- function(model) {
+  rdf <- df.residual(model)
+  rp <- residuals(model, type = "pearson")
+  Pearson.chisq <- sum(rp^2)
+  prat <- Pearson.chisq / rdf
+  pval <- pchisq(Pearson.chisq, df = rdf, lower.tail = FALSE)
+  c(chisq = Pearson.chisq, ratio = prat, rdf = rdf, p = pval)
+}
+
+overdisp_fun(fagus_mod_up2)
+
+ testDispersion(sim_res)
+testZeroInflation(sim_res)
+testResiduals(sim_res)
+
+```
+
+```{r}
+fagus_mod_upun <-  glmmTMB(mort ~ scale(dbh_mm)+scale(temp_k_mean_ann_int)*scale(ppt_mm_ann_int)+
+               #  scale(Fagus)+scale(Picea)  + scale(Abies) + 
+                   scale(coefvar) +
+               scale(plot_ba)+ offset(log(census_yrs)) + (1|plotid),
+               family = binomial(link = "cloglog"),
+               data = trees_FAGUS_up)
+
+summary(fagus_mod_upun)
+AIC(fagus_mod_upun,fagus_mod_up)
+BIC(fagus_mod_upun,fagus_mod_up)
+
+anova(fagus_mod_upun,fagus_mod_up)
+```
+
+```{r}
+trees_FAGUS_up$predicted_prob <- predict(fagus_mod_up, type = "response")
+
+roc_obj <- roc(trees_FAGUS_up$mort, trees_FAGUS_up$predicted_prob)
+auc(roc_obj)
+ plot(roc_obj)
+```
+ 
+```{r}
+trees_FAGUS_up$predicted_prob <- predict(fagus_mod_clim, type = "response", re.form = NA)
+
+sim_res <- simulateResiduals(fittedModel = fagus_mod_clim)
+plot(sim_res)
+
+plotResiduals(sim_res, trees_FAGUS_up$temp_k_mean_ann_int)
+plotResiduals(sim_res, trees_FAGUS_up$plot_ba)
+plotResiduals(sim_res, trees_FAGUS_up$ppt_mm_ann_int)
+plotResiduals(sim_res, trees_FAGUS_up$dbh_mm)
+
+plotResiduals(sim_res,quantreg = T)
+
+plotQQunif(sim_res) # left plot in plot.DHARMa()
+plotResiduals(sim_res) # right plot in plot.DHARMa()
+
+
+testQuantiles(sim_res)
+  
+plot(sim_res, asFactor = T)
+?simulateResiduals
+library(ggeffects)
+
+preds <- ggpredict(model, terms = c("dbh_mm [all]", "temp_k_ann_diff [all]","WB_mm_mean_summer_diff [all]"))  # or other variables
+plot(preds) + ggtitle("Predicted Mortality by dbh and Stratum")
+
+library(ggplot2)
+
+ggplot(trees, aes(x = (temp_k_ann_diff), y = predicted_prob)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "loess", se = FALSE) +
+ # facet_wrap(~stand)+
+  labs(title = "Predicted Mortality vs. Tree Size",
+       y = "Predicted Mortality Probability")
+
+
+# 1. build grid (other covariates fixed at mean/mode)
+newdat <- expand.grid(
+  dbh_mm                 = mean(trees_FAGUS$dbh_mm),
+  stratum                = 0,
+  temp_k_ann_diff        = seq(min(trees_FAGUS$temp_k_ann_diff),
+                               max(trees_FAGUS$temp_k_ann_diff), length = 100),         # already scaled → mean = 0
+  Fagus                  = 0,
+  Picea                  = 0,
+  Abies                  = 0,
+  WB_mm_mean_summer_diff = 0,
+  plot_ba                = 0,
+  relCirc                = 0,
+  census_yrs             = trees_FAGUS$census_yrs          # typical interval
+)
+
+# 2. get marginal predictions (no random effects!)
+newdat$pred <- predict(fagus_mod, newdata = newdat,
+                       type = "response", re.form = NA)
+
+# 3. plot
+ggplot(newdat,
+       aes(x = dbh_mm, y = pred, colour = stratum)) +
+  geom_line(size = 1) +
+  labs(y = "Predicted 5‑yr mortality",
+       x = "DBH (mm)",
+       colour = "Stratum") +
+  theme_minimal()
+
+# https://github.com/florianhartig/DHARMa/issues/396
+
+```
+
+
+### Lower
+
+```{r}
+trees_FAGUS_low <- trees %>%
+  filter(sp_group_dist %in% "Fagus",
+         stratum %in% "lower")
+```
+
+**Model comparison**
+```{r}
+fagus_mod_low <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+scale(temp_k_mean_seas_int)*scale(ppt_mm_seas_int)+
+                 scale(Fagus)+ scale(Picea)  + scale(Abies) + 
+                   scale(coefvar) +
+               scale(plot_ba)+ offset(log(census_yrs)) + (1|stand),
+               family = binomial(link = "cloglog"),
+               data = trees_FAGUS_low)
+
+summary(fagus_mod_low)
+
+sim_res <- simulateResiduals(fittedModel = fagus_mod_low)
+plot(sim_res, rank = T)
+```
+
+
+```{r} 
+all_mod <- glmmTMB(mort ~ scale(dbh_mm) +scale(temp_k_ann_diff) +
+              #  scale(Fagus) + scale(Picea)  + 
+                scale(WB_mm_mean_summer_diff) + scale(plot_ba)+ scale(relCirc)+ offset(log(census_yrs)) + scale(time_since_dist_recent)+scale(my_rec_sev)+(1|plotid),
+               family = binomial(link = "cloglog"),
+               data = trees_FAGUS)
+
+```
+
+
+```{r}
+trees_ABIES <- trees %>%
+  filter(sp_group_dist %in% "Abies",
+         stratum %in% "upper")# %>%
+
+model <-glmmTMB(mort ~ scale(poly(dbh_mm,2))+scale(temp_k_mean_ann_int)*scale(ppt_mm_ann_int)+
+                 scale(Fagus)+scale(Picea)  + scale(Abies) + scale(coefvar) +
+               scale(plot_ba)+ offset(log(census_yrs)) + (1|plotid),
+               family = binomial(link = "cloglog"),
+               data = trees_ABIES)
+
+model2 <-glmmTMB(mort ~ scale(dbh_mm)+scale(temp_k_mean_ann_int)*scale(ppt_mm_ann_int)+
+                 scale(Fagus)+scale(Picea)  + scale(Abies) + scale(coefvar) +
+               scale(plot_ba)+ offset(log(census_yrs)) + (1|plotid),
+               family = binomial(link = "cloglog"),
+               data = trees_ABIES)
+anova(model,model2)
+
+summary(model2)
+
+
+trees_ABIES$predicted_prob <- predict(model, type = "response")
+
+roc_obj <- roc(trees_ABIES$mort, trees_ABIES$predicted_prob)
+auc(roc_obj)
+ plot(roc_obj)
+ 
+ sim_res <- simulateResiduals(fittedModel = model)
+plot(sim_res, rank = T)
+
+plotResiduals(sim_res, trees_ABIES$temp_k_ann_diff)
+plotResiduals(sim_res, trees_ABIES$plot_ba)
+plotResiduals(sim_res, trees_ABIES$WB_mm_mean_summer_diff)
+plotResiduals(sim_res, trees_ABIES$dbh_mm)
+
+tab_model(model)
+
+ testDispersion(sim_res)
+testZeroInflation(sim_res)
+testResiduals(sim_res)
+
+trees_ABIES <- trees %>%
+  filter(sp_group_dist %in% "Picea",
+         stratum %in% "lower")# %>%
+
+model <-glmmTMB(mort ~ scale(poly(dbh_mm,2))+scale(temp_k_mean_ann_int)*scale(ppt_mm_ann_int)+
+              #   scale(Fagus)+scale(Picea)  + scale(Abies) + scale(coefvar) +
+               scale(plot_ba)+ offset(log(census_yrs)) + (1|plotid),
+               family = binomial(link = "cloglog"),
+               data = trees_ABIES)
+summary(model)
+
+
+model2 <-glmmTMB(mort ~ scale(dbh_mm)+scale(temp_k_mean_ann_int)*scale(ppt_mm_ann_int)+
+            #     scale(Fagus)+scale(Picea)  + scale(Abies) + scale(coefvar) +
+               scale(plot_ba)+ offset(log(census_yrs)) + (1|plotid),
+               family = binomial(link = "cloglog"),
+               data = trees_ABIES)
+
+anova(model2,model)
+
+```

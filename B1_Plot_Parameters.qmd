@@ -1,0 +1,310 @@
+---
+title: "B1. Disturbance Plot Parameters"
+format:
+  html:
+    theme: spacelab
+    toc: true
+    number-sections: true
+---
+
+# Overview
+
+This document calculates the disturbance parameters for the Balkan region (including Croatia, Albania, Bulgaria, Romania (seminic), and Bosnia). Below the age cutoff, absolute increase threshold, DBH threshold, and are all calculated. The metrics are calculated by species group with the 'Others' being an average of all other groups given the low sample size (<10).
+
+::: panel-tabset
+
+## Gather data & identifiers
+
+**Packages**
+```{r}
+#| warning: false
+
+library(DHARMa) # 0.4.6
+library(effects) # 4.2.-2 (carData 3.0-5)
+# ncf 1.3-2
+library(performance) # 0.11.0
+library(pool) # 1.0.3
+library(tidyverse) # 2.0.0 (dplyr 1.1.4, forcats 1.0.0, ggplot2 3.5.1, lubridate 1.9.3, purrr 1.0.2, readr 2.1.5, stringr 1.5.1, tibble 3.2.1, tidyr 1.3.1)
+library(pracma) # 2.4.4
+library(cutpointr) # 1.1.2
+library(lme4) # 1.1-35.1 (Matrix 1.5-3)
+library(RPostgreSQL) # 0.7-6 (DBI 1.2.3)
+library(zoo) # 1.8-12
+```
+**Database connection**
+
+```{r}
+# Connect to the database
+KELuser <- dbPool(RPostgreSQL::PostgreSQL(),
+                  dbname = 'remoteforestsorg',
+                  host = '91.239.201.14',
+                  port = 4010,
+                  user = 'remoteforests002', 
+                  password = 'COVBtxQ5')
+```
+
+**Trees**
+```{r}
+full_trees_dist <- read_csv("Data/full_trees_dist.csv")
+```
+
+**Disturbance functions**
+```{r}
+source("B00_disturbance_functions.R")
+```
+
+## Collect from database
+
+**Plot_id**
+
+```{r}
+plot.id <- tbl(KELuser, "plot") %>%
+  filter(ownership %in% 1,
+          country %in% c("Albania", "Bosnia", "Croatia", "Romania", "Bulgaria"),
+         foresttype %in% c("beech"),
+        plottype %in% c(3, 4),
+         census %in% 1,
+         !is.na(lng),
+         !is.na(lat)) %>%
+  filter(!location %in% c("Fagaras", "Maramures")) %>%
+  select( -ownership, -hillform,-landform,-aspect,-plot,-slope) %>%
+pull(id)
+  
+```
+
+**Tree_id**
+```{r}
+tree.id <- full_trees_dist %>%
+  filter(dbh_mm >= 60,
+         status %in% c(1),
+         !treetype %in% c("g", "r", "t"),
+         !species %in% c("Lians", "99")) %>%
+  pull(tree_id)
+```
+
+**Core_id**
+```{r}
+ core.id <- tbl(KELuser, "core") %>%
+  filter(coretype %in% 1,
+         !crossdated %in% c(12, 20:22, 99),
+         corestatus %in% c(0, 1),
+         missing_mm < 30,
+         missing_years < 30,
+                       !is.na(missing_mm),
+                      !is.na(missing_years)) %>%
+  pull(id)
+```
+
+:::
+
+# DBH
+
+## Pull data
+
+**note that mid layers are excluded for canopy ascension dbh**
+
+```{r}
+data.dbh <-  full_trees_dist %>%
+   filter(tree_id %in% tree.id,
+          growth %in% c(0, 1),
+          layer %in% c(11, 12, 13)) %>%
+   select(date, treeid, growth, layer, sp_group_dist, dbh_mm) %>%
+   mutate(sp_group_dist = ifelse(sp_group_dist %in% "Others", "Acer", sp_group_dist)) %>%
+   collect() %>%
+  mutate(growth_use = case_when(
+    growth %in% 1 & layer %in% c(11) ~ 1,
+    growth %in% 0 & layer %in% c(13) ~ 0))
+```
+
+## Calculate DBH threshold
+
+```{r}
+set.seed(10)
+
+dbh <- data.dbh %>%
+  filter(!is.na(growth_use)) %>%
+  cutpointr(., x = dbh_mm, class = growth_use, subgroup = sp_group_dist,
+            pos_class = 1, neg_class = 0, direction = ">=",
+            method = minimize_boot_metric, metric = abs_d_sens_spec,
+            boot_cut = 10000, boot_stratify = T, use_midpoints = T)
+
+plot(dbh)
+
+dbh <- dbh %>%
+  select(sp_group_dist  = subgroup, dbh_mm = optimal_cutpoint) %>%
+           add_row(sp_group_dist = "Others", dbh_mm = 204.6381)
+```
+
+:::
+
+# Gapmaker Age
+
+::: panel-tabset
+
+## Data collect 
+
+```{r}
+data.age <- tbl(KELuser, "ring") %>%
+  inner_join(., tbl(KELuser, "core") %>%
+               filter(id %in% core.id),
+             by = c("core_id" = "id")) %>%
+  inner_join(., tbl(KELuser, "tree") %>% filter(id %in% tree.id), by = c("tree_id" = "id")) %>%
+  inner_join(., tbl(KELuser, "species_fk"), by = c("species" = "id")) %>%
+  inner_join(., tbl(KELuser, "plot") %>% filter(id %in% plot.id), by = c("plot_id" = "id")) %>%
+  select(date, location, treeid, dbh_mm, missing_mm, sp_group_dist, missing_years, year, incr_mm) %>%
+  collect() %>%
+  arrange(date, location, treeid, year) %>%
+  group_by(date, treeid) %>%
+  mutate(incr_mm = if_else(incr_mm %in% 0, NA_real_, incr_mm),
+         incr_mm = na.approx(incr_mm),
+         dbh_growth = ifelse(row_number() == 1, incr_mm + missing_mm, incr_mm),
+         dbh_growth = cumsum(dbh_growth) * 2,
+         dbh_mm = ifelse(is.na(dbh_mm), max(dbh_growth), dbh_mm),
+         dbh_coef = max(dbh_mm) / max(dbh_growth),
+         dbh_growth = round(dbh_growth * dbh_coef, 0),
+         age = year - min(year) + missing_years + 1) %>%
+  ungroup()
+```
+
+## Calculate age
+
+```{r}
+age <- data.age %>%
+  inner_join(., dbh %>% rename(dbh_thres=dbh_mm), by = "sp_group_dist") %>%
+  filter(dbh_growth >= dbh_thres) %>% 
+  arrange(date, treeid, year) %>%
+  group_by(date, treeid) %>%
+  filter(row_number() == 1) %>%
+  ungroup() %>%
+  mutate(sp_group_dist = ifelse(sp_group_dist %in% "Others", "Acer", sp_group_dist)) %>%
+  group_by(sp_group_dist) %>%
+  summarise(age_mean = mean(age),
+            ntrees = n()) %>%
+  ungroup()
+```
+
+:::
+
+# Absolute increase
+
+::: panel-tabset
+
+## Calculate running AI
+```{r}
+try.ai <- data.age %>%
+  inner_join(., dbh %>%
+               rename(dbh_thres = dbh_mm), by = "sp_group_dist") %>%
+  arrange(date, treeid, year) %>%
+  group_by(date, treeid) %>%
+  mutate(pg = priorGrowth(incr_mm, windowLength = 10),
+         fg = followGrowth(incr_mm, windowLength = 10),
+         ai = fg - pg) %>%
+  ungroup() %>%
+  filter(dbh_growth <= dbh_thres) %>%
+  filter(!ai %in% c("NaN", NA))
+```
+
+## AI thresholds
+```{r}
+try.ai.filt <- try.ai %>%
+     mutate(sp_group_dist = ifelse(sp_group_dist %in% "Others", "Acer", sp_group_dist)) %>%
+  group_by(sp_group_dist) %>%
+  mutate(ai_mm = sd(ai) * 1.25) %>%
+  ungroup() %>%
+  distinct(., date, treeid, .keep_all = T) %>%
+  group_by(sp_group_dist, ai_mm) %>%
+  summarise(ntrees = n()) %>%
+  ungroup() %>%
+  select(sp_group_dist, ai_mm) %>%
+           add_row(sp_group_dist = "Others", ai_mm = 0.8503514)
+  
+```
+
+:::
+
+# Gap detection
+
+::: panel-tabset
+
+## Calculate releases
+
+```{r}
+data.gap <- tbl(KELuser, "ring") %>%
+  inner_join(., tbl(KELuser, "core") %>%
+               filter(id %in% core.id,
+                      !is.na(missing_mm),
+                      !is.na(missing_years)),
+             by = c("core_id" = "id")) %>%
+  collect() %>%
+  inner_join(., full_trees_dist %>% filter(growth %in% c(0,1)), by = "tree_id") %>%
+  select(date, treeid, species, sp_group_dist, growth, missing_years, year, treetype, incr_mm) %>%
+  collect() %>%
+  inner_join(., try.ai.filt %>% select(sp_group_dist , ai_mm), by = c("sp_group_dist")) %>%
+  arrange(date, treeid, year) %>%
+  group_by(date, treeid, sp_group_dist, growth) %>%
+  mutate(incr_mm = if_else(incr_mm %in% 0, NA_real_, incr_mm),
+         incr_mm = na.approx(incr_mm),
+         pg = priorGrowth(incr_mm, windowLength = 10),
+         fg = followGrowth(incr_mm, windowLength = 10),
+         ai = fg - pg,
+         release = ifelse(row_number() %in% peakDetection(x = ai, threshold = first(ai_mm), nups = 1, mindist = 30, trim = T), "yes", NA),
+         release = ifelse(lead(fg, 7) <= pg, NA, release),
+         release = ifelse(lag(pg, 7) >= fg, NA, release),
+         release = first(release[!is.na(release)]),
+         age = year - min(year) + missing_years + 1) %>%
+  filter(age %in% c(5:14)) %>%
+  summarise(incr_mean = mean(incr_mm, na.rm = T),
+            nyears = length(incr_mm[!is.na(incr_mm)]),
+            release = first(release)) %>%
+  ungroup() %>%
+  filter(nyears %in% 10) %>%
+  mutate(use = ifelse(growth %in% 1 & release %in% "yes", "no", "yes"),
+         release = ifelse(is.na(release), "no", release))
+```
+
+## Gap Threshold
+
+```{r}
+set.seed(10)
+
+gap<-data.gap %>%
+      mutate(sp_group_dist = ifelse(sp_group_dist %in% "Others", "Acer", sp_group_dist)) %>%
+      filter(use %in% "yes",
+             !sp_group_dist %in% "Others") %>%
+ cutpointr(., x = incr_mean, class = growth, subgroup = sp_group_dist,
+            pos_class = 1, neg_class = 0, direction = ">=",
+            method = minimize_boot_metric, metric = abs_d_sens_spec,
+            boot_cut = 10000, boot_stratify = T, use_midpoints = T)
+
+plot(gap) 
+```
+
+::: 
+
+# Create my own dist_param
+
+After alllllllllllllllllll that... this is what I get.
+
+```{r}
+balk_dist_param <- age %>%
+  select(sp_group_dist , gapmaker_age = age_mean) %>%
+  add_row(sp_group_dist = "Others", gapmaker_age = 51.68085) %>%
+  mutate(gapmaker_age = round(gapmaker_age, 0)) %>%
+  inner_join(., dbh
+               , by = "sp_group_dist") %>%
+  inner_join(., gap %>% select(sp_group_dist  = subgroup, gap_mm =  optimal_cutpoint) %>%
+  add_row(sp_group_dist = "Others", gap_mm = 1.9750534), by = "sp_group_dist") %>%
+  inner_join(., try.ai.filt, by = "sp_group_dist") 
+
+write_csv(balk_dist_param,file="Data/balk_dist_param.csv")
+```
+
+**Close out KEL**
+
+```{r}
+poolClose(KELuser)
+```
+
+
+
+

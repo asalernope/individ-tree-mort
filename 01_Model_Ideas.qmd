@@ -1,0 +1,60 @@
+---
+title: "01_Model write-up"
+format:
+  html:
+    theme: spacelab
+    toc: true
+    number-sections: true
+---
+
+Hello Arne,
+
+This document is my attempt at writing out the models for use in our likelihood analysis. I realized my attempt at writing these out is just me reviewing the multiple papers and identifying which models seem to be most useful for our purposes :)
+
+**Mortality = Potential Survival x Size\[moderated by canopy status\] x Disturbance x Climate (Measure of water deficit... maybe temp)**
+
+# Proposed models
+
+```{r, eval=FALSE}
+mort <- function(PS,sizeI,sizeXa,sizeXb,Da,Db,Dc,Ca,Cb,Cc,plot)
+  
+{ 
+  size <- exp(-0.5*(log(data$dbh_mm+sizeI/sizeXa[status])/sizeXb[status])^2) 
+  dist <- Da*(data$time_since^Db*data$severity^Dc)
+  clim <- Ca*Cb^((data$climate-Cc)^2)
+  
+  logit <- PS[plot] * size * dist * clim
+  logit/(1+logit)
+}
+```
+
+# Basis for proposed models
+
+The climate model uses an exponential function requiring four parameter estimations following the function outlined in Canham et al. (2018). Canham et al. (2018) used the 'clim' value as I called it as a difference between current and long-term average. I don't remember what we decided when we talked about using the climate in the interim period. If we would use just the values or some exceedance from this period. I think this would work either way with this function.
+
+The size function similarly follows the form provided in Canham et al. (2018) with the addition of different parameter estimations for canopy and suppressed trees, here noted as `[status]`. I am unsure if the 'sizeI' should also be estimated separately for status given it is an intercept adjuster.
+
+The disturbance function is exponential requiring three parameter estimates. It includes the interaction of exponentiated (wording?) severity and timing to parameterize their effects with one another and another parameter that moderates the total effect of them both. Sorry if my wording is not quite correct - I am learning :).
+
+We also talked about including some metric of competition. I am also not sure what we decided on. A couple papers used a neighborhood competition index (Uriarte et al. 2004a, 2004b), but the more recent Canham and Murphy (2017) paper used a simpler metric based on basal area ratios. There are also some interesting structural competitive indices in Hui et al. (2018). Not sure how differently they would perform in the models. I will assemble a dataset with all the trees so we can do this calculation. I think it will be useful have it and possible test it vs including disturbance or maybe some relationship between the two. But, keeping it simple given the dataset may be better.
+
+Here is the attempt at the function a competition index metric similar to the Uriarte papers. Not including a code to calculate said index.
+
+```{r, eval=FALSE}
+comp <- exp(COa* (data$compInd/data$compMax)^COb)
+```
+
+# References
+
+Canham, C. D., and L. Murphy. 2017. The demography of tree species response to climate: sapling and canopy tree survival. Ecosphere 8:e01701.
+
+Canham, C. D., L. Murphy, R. Riemann, R. McCullough, and E. Burrill. 2018. Local differentiation in tree growth responses to climate. Ecosphere 9:e02368.
+
+Hui, G., Y. Wang, G. Zhang, Z. Zhao, C. Bai, and W. Liu. 2018. A novel approach for assessing the neighborhood competition in two different aged forests. Forest Ecology and Management 422:49--58.
+
+Uriarte, M., C. D. Canham, J. Thompson, and J. K. Zimmerman. 2004a. A Neighborhood Analysis of Tree Growth and Survival in a Hurricane-Driven Tropical Forest. Ecological Monographs 74:591--614.
+
+Uriarte, M., R. Condit, C. D. Canham, and S. P. Hubbell. 2004b. A spatially explicit model of sapling growth in a tropical forest: does the identity of neighbours matter? Journal of Ecology 92:348--360.
+
+
+

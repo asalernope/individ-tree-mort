@@ -1,0 +1,457 @@
+---
+title: "B2_Disturbance_Plot_Level"
+format:
+  html:
+    theme: spacelab
+    toc: true
+    number-sections: true
+---
+
+# Overview
+
+In this document, I will calculate canopy disturbance percentages from tree level up to plot level across the Balkan countries: Bosnia and Herzegovina, Albania, Bulgaria, and Croatia and the Semenic stand from Romania.
+
+# Gather data & identifiers
+
+## Packages
+
+```{r}
+#| echo: false
+#| output: false
+library(tidyverse);library(pool);library(zoo);library(pracma);library(lme4);library(cutpointr); library(pool); library(readxl); library(purrr); library(readr); library(forecast); library(dplR); library(ggrepel); library(DHARMa)
+```
+
+## Database Pull
+
+**Pull from source that contains functions utilized in this code**
+
+```{r}
+source("B00_disturbance_functions.R")
+full_trees_dist <- read_csv("Data/full_trees_dist.csv") %>%
+  select(-1)
+balk_dist_param <- read_csv("Data/balk_dist_param.csv")
+```
+
+**Database access**
+
+```{r}
+# Connect to the database
+KELuser <- dbPool(RPostgreSQL::PostgreSQL(),
+                  dbname = 'remoteforestsorg',
+                  host = '91.239.201.14',
+                  port = 4010,
+                  user = 'remoteforests002',
+                  password = 'COVBtxQ5')
+```
+
+## Identifiers
+
+::: panel-tabset
+### Plot ID
+
+```{r}
+plot.id <- tbl(KELuser, "plot") %>%
+  filter(ownership %in% 1,
+          country %in% c("Albania", "Bosnia", "Croatia", "Romania", "Bulgaria"),
+          foresttype %in% c("beech"),
+          plottype %in% c(3, 4),
+         census %in% 1,
+         !is.na(lng),
+         !is.na(lat)) %>%
+ filter(!location %in% c("Fagaras", "Maramures")) %>%
+pull(id)
+```
+
+### Tree ID
+
+```{r}
+tree.id_cen1 <- full_trees_dist %>% 
+  filter(dbh_mm >= 60,
+         !status %in% c(0, 10, 15, 99),
+         growth %in% c(-1, 0, 1, 99),
+         treetype %in% "0" & onplot %in% c(1, 2) | treetype %in% c("m", "x"),
+         !species %in% c("Lians", "99")) %>%
+ pull(tree_id)
+
+tree.id <- tbl(KELuser, "tree") %>%
+  filter(dbh_mm >= 60,
+         !status %in% c(0, 10, 15, 99),
+         growth %in% c(-1, 1, 99),
+          treetype %in% "0" & onplot %in% c(1, 2) | treetype %in% c("m", "x"),
+         !species %in% c("Lians", "99")) %>%
+  pull(id)
+```
+
+### Core ID
+
+```{r}
+core.id <- tbl(KELuser, "core") %>%
+  filter(coretype %in% c(1),
+         !crossdated %in% c(12, 20:22, 99),
+         !corestatus %in% c(2, 3),
+         !is.na(missing_mm),
+         !is.na(missing_years),
+         missing_mm < 30,
+         missing_years < 30) %>%
+  pull(id)
+```
+
+:::
+
+# Tree-level disturbance
+
+**Create data list**
+
+```{r}
+ID <- tbl(KELuser, "core") %>% filter(id %in% core.id) %>% # 4393
+  inner_join(., tbl(KELuser, "tree") %>% filter(id %in% tree.id_cen1), by = c("tree_id" = "id")) %>%
+  inner_join(., tbl(KELuser, "plot") %>% filter(id %in% plot.id), by = c("plot_id" = "id")) %>%
+  pull(id)
+
+ID.db <- tbl(KELuser, "core") %>% filter(id %in% core.id) %>% # 3109
+  inner_join(., tbl(KELuser, "tree") %>% filter(id %in% tree.id), by = c("tree_id" = "id")) %>%
+  inner_join(., tbl(KELuser, "plot") %>% filter(id %in% plot.id), by = c("plot_id" = "id")) %>%
+  pull(id)
+
+data.list <- distGetData(ID = ID)
+
+
+data.list.db <- distGetData(ID = ID.db)
+```
+
+## Growth reconstruction
+
+```{r}
+data.growth <- growthCalculate(data = data.list, windowLength = 10)
+data.growth.db <- growthCalculate(data = data.list.db, windowLength = 10)
+```
+
+
+## Identify events - gap ascension
+
+```{r}
+data.event1 <- eventCalculate(data = data.growth, gapAge = c(5:14), nprol = 7)
+data.event.db <- eventCalculate(data = data.growth.db, gapAge = c(5:14), nprol = 7)
+```
+
+```{r}
+data.event <- data.event1 %>%
+    inner_join(., full_trees_dist, by = "tree_id") %>%
+    full_join(., balk_dist_param %>% select(sp_group_dist, dbh_thres = dbh_mm), by = "sp_group_dist") %>%
+   filter(tree_id %in% data.event.db$tree_id | growth %in% 1| (event %in% c("release", "gap") & dbh_mm >= dbh_thres)) %>%
+    select(tree_id, year, event)
+```
+
+# Plot level
+
+## Crown area
+
+Crown area is constructed through a linear model whereby canopy area is predicted by dbh_mm taking stand, subplot, and plot into account. There is an individual model for coniferous and broadleaf species.
+
+```{r}
+data.ca <- tbl(KELuser, "dist_data_ca") %>% select(stand, subplot, plotid, sp_type, dbh_mm, ca_m2) %>% collect()
+
+data.conif <- data.ca %>% filter(sp_type %in% "coniferous")
+conif <- lmer(sqrt(ca_m2) ~ dbh_mm + (1|stand) + (1|subplot) + (1|plotid), data = data.conif)
+
+data.broad <- data.ca %>% filter(sp_type %in% "broadleaved")
+broad <- lmer(sqrt(ca_m2) ~ dbh_mm + (1|stand) + (1|subplot) + (1|plotid), data = data.broad)
+```
+
+## Sampled & unsampled
+
+::: panel-tabset
+
+### Sampled trees
+
+```{r}
+data.sampled <- data.event %>%
+  inner_join(., tbl(KELuser, "core") %>% select(core_id = id, tree_id), by = "tree_id", copy = TRUE) %>%
+  inner_join(., tbl(KELuser, "ring") %>% 
+              group_by(core_id) %>% summarise(year_min = min(year), year_max = max(year) - 10),
+             by = "core_id", copy = TRUE) %>%
+filter(!(year_min > year_max & year > year_max)) %>%
+  inner_join(., full_trees_dist %>% select(plot_id, growth, treeid, tree_id, sp_type, species, sp_group_dist, dbh_mm, layer), by = c("tree_id" = "tree_id"), copy = TRUE) %>%
+ distinct(., plot_id, tree_id, year_min, year_max) %>%
+     collect() %>%
+  group_by(plot_id) %>%  # filter plots by the minimum number of usable cores
+  filter(n() >= 6) %>%
+  ungroup() %>%
+  inner_join(., tbl(KELuser, "plot") %>% select(-stand, -subplot), by = c("plot_id" = "id"), copy = TRUE) %>%
+  inner_join(., tbl(KELuser, "spatial_hierarchy"), by = "plotid", copy = TRUE) %>%
+  inner_join(., full_trees_dist %>% select(plot_id, growth, treeid, tree_id, sp_type, species, sp_group_dist, dbh_mm, layer), by = c("tree_id" = "tree_id", "plot_id"), copy = TRUE) %>%
+#  inner_join(., tbl(KELuser, "species_fk"), by = c("species" = "id"), copy = TRUE) %>%
+  inner_join(., data.event, by = "tree_id") %>%
+ select(country, stand, subplot, plotid, plot_id, growth, treeid, tree_id, sp_type, species, dbh_mm, year_min, year_max, event, year, date) %>%
+  collect()
+
+```
+
+### Unsampled trees
+
+The unsampled trees have unusable cores and are located on the plot - should also be canopy level trees.
+
+```{r}
+data.unsampled <- tbl(KELuser, "core") %>% 
+  filter(coretype %in% 1) %>%
+  collect() %>%
+  right_join(., full_trees_dist %>% 
+               select(tree_id, treeid, growth, status, layer, species, dbh_mm, plot_id) %>%
+               filter(tree_id %in% tree.id_cen1,
+                  growth %in% c(1), #| (growth %in% 0 & tree_id %in% data.event1$tree_id),
+                    !tree_id %in% local(data.sampled$tree_id)), by = c("tree_id" = "tree_id")) %>% 
+  inner_join(., tbl(KELuser, "tree") %>% filter(id %in% local(data.sampled$tree_id)) %>% distinct(., plot_id), by = "plot_id", copy = TRUE) %>%
+  inner_join(., tbl(KELuser, "plot"), by = c("plot_id" = "id"), copy = TRUE) %>%
+  filter((foresttype %in% "spruce" & !stand %in% "Polana" & !is.na(subcore)) | ((foresttype %in% "beech" | stand %in% "Polana") & (status %in% c(1:4) & !is.na(subcore)))) %>%
+  select(-stand, -subplot) %>%
+  inner_join(., tbl(KELuser, "spatial_hierarchy"), by = "plotid", copy = TRUE) %>%
+  inner_join(., tbl(KELuser, "species_fk"), by = c("species" = "id"), copy = TRUE) %>%
+  mutate(year_min = 0,
+         year_max = 0,
+         event = "unsampled",
+         year = 0) %>%
+ select(country, stand, subplot, plotid, plot_id, growth, treeid, tree_id, sp_type, species, dbh_mm, year_min, year_max, event, year, date) %>%
+  collect()
+```
+
+### Combined & canopy area calculation
+
+```{r}
+data.all <- bind_rows(data.sampled, data.unsampled) %>%
+  mutate(ca_m2 = case_when(
+          sp_type %in% "broadleaved" ~ predict(object = broad, newdata = ., allow.new.levels = T),
+          sp_type %in% "coniferous" ~  predict(object = conif, newdata = ., allow.new.levels = T)),
+         ca_m2 = ca_m2^2)
+
+write_csv(data.all,file="Data/used.dist.trees.csv") 
+
+data.all<-read_csv("Data/used.dist.trees.csv")
+
+```
+
+
+###  Look at prop of canopy trees sampled
+```{r}
+samp.can <- data.sampled %>%
+    mutate(ca_m2 = case_when(
+          sp_type %in% "broadleaved" ~ predict(object = broad, newdata = ., allow.new.levels = T),
+          sp_type %in% "coniferous" ~  predict(object = conif, newdata = ., allow.new.levels = T)),
+         ca_m2 = ca_m2^2) %>%
+  group_by(plotid) %>%
+  summarise(count = n(),
+            samp = sum(ca_m2))
+
+try <- data.all %>%
+  group_by(plotid) %>%
+  summarise(n = n(),
+             ca_pct = sum(ca_m2)) %>%
+  inner_join(., samp.can, by = "plotid") %>%
+  mutate(prop = count/n,
+         perc = samp/ca_pct)
+```
+
+:::
+
+# Bootstrapping plot-level
+
+::: panel-tabset
+## Calculate canopy disturbance percentage
+
+```{r}
+#| output: false
+
+data.boot <- data.all %>% 
+  distinct(., plotid, tree_id) %>%
+  slice(rep(1:nrow(.), each = 1000)) %>%
+  mutate(rep = rep(1:1000, times = nrow(.) / 1000)) 
+
+set.seed(1)
+
+data.dist.boot <- data.boot %>%
+  group_by(plotid, rep) %>%
+  # size of bootstrapping subsamples = maximum common number of tree records per plot (sampled + unsampled) - raise overlap??? 
+  slice_sample(., n = 10, replace = TRUE) %>%
+  ungroup() %>%
+  left_join(., data.all %>% select(plotid, tree_id, year_min, year_max, event, year, ca_m2), by = c("plotid", "tree_id")) %>%
+  do({
+    
+    x <- .
+    
+    x1 <- x %>% 
+      filter(!event %in% c("unsampled")) %>% 
+      group_by(plotid, rep, year) %>% 
+      summarise(ca_event = sum(ca_m2)) %>%
+      ungroup()
+    
+    x2 <- x %>% 
+      group_by(plotid, rep, tree_id) %>% 
+      filter(year %in% first(year)) %>% 
+      group_by(plotid, rep) %>% 
+      summarise(ca_total = sum(ca_m2)) %>%
+      ungroup()
+    
+    x3 <- x %>% 
+      group_by(plotid, rep, tree_id) %>% 
+      filter(!event %in% "unsampled", 
+             year %in% first(year)) %>% 
+      group_by(plotid, rep) %>% 
+      filter(n() >= 1) %>% 
+      summarise(year_min = min(year_min),
+                year_max = max(year_max),
+                ncores = n()) %>%
+      ungroup()
+    
+    inner_join(x1, x2 %>% inner_join(., x3, by = c("plotid", "rep")), by = c("plotid", "rep"))
+  }) %>%
+  mutate(ca_pct = ca_event * 100 / ca_total)
+```
+
+
+## Fill the period
+
+```{r}
+#| echo: false
+
+beg <- min(data.dist.boot$year)
+end <- max(data.dist.boot$year)
+
+data.dist <- tibble()
+
+for (p in unique(data.dist.boot$plotid)) {
+  
+  x <- data.dist.boot %>% filter(plotid %in% p) 
+  
+  out <- inner_join(
+    x %>% 
+      select(plotid, rep, year, ca_pct) %>% 
+      group_by(plotid, rep) %>% 
+      complete(year = beg:end, fill = list(ca_pct = 0)) %>% 
+      group_by(plotid, year) %>% 
+      summarise(ca_pct = mean(ca_pct)) %>%
+      ungroup(),
+    x %>% 
+      distinct(., plotid, rep, year_min, year_max, ncores) %>% 
+      group_by(plotid) %>%
+      summarise(year_min = round(mean(year_min), 0),
+                year_max = round(mean(year_max), 0),
+                ncores = round(mean(ncores), 0)) %>%
+      ungroup(),
+    by = "plotid") 
+  
+  data.dist <- bind_rows(data.dist, out)
+  
+  remove(x, out)
+}
+```
+:::
+
+# Kernel density estimation & peak detection
+
+::: panel-tabset
+## Full chronologies
+
+```{r}
+data.kde.full <- data.dist %>%
+  filter(year >= year_min, year <= year_max) %>%
+  group_by(plotid) %>%
+  complete(year = (min(year)-30):(max(year)+30), fill = list(ca_pct = 0)) %>%
+  mutate(kde = kdeFun(ca_pct, k = 30, bw = 5, st = 7)) %>%
+  filter(year %in% c((min(year)+15):(max(year)-10))) %>%
+  ungroup() %>%
+  mutate(type = "full")
+
+data.peaks.full <- data.kde.full %>% 
+  group_by(plotid) %>%
+  filter(row_number() %in% peakDetection(x = kde, threshold = 10, nups = 5, mindist = 10)) %>%
+  ungroup() %>%
+  mutate(type = "full",
+         peak = "yes")
+```
+
+:::
+
+# Plot disturbance at the plot level
+
+::: panel-tabset
+
+## Prep data
+
+Below I plot the data for the data peaks.
+
+```{r}
+plot_level <- data.kde.full %>%
+  drop_na() %>%
+  left_join(data.peaks.full %>% select(peak, plotid, year), by = c("plotid", "year")) %>%
+  mutate(peak = ifelse(peak %in% "yes", "yes", "no")) %>%
+  left_join(data.sampled %>% distinct(., stand, plotid), by = "plotid")  %>%
+  group_by(plotid) %>%
+  filter(!year < year_min, 
+         !year > year_max)
+
+write_csv(plot_level,file="Data/plot_level.csv")
+
+
+```
+
+
+## Plot-level Disturbance
+
+```{r}
+plot_level %>%
+  filter(peak %in% "yes")
+
+rec_dis <- plot_level %>%
+  filter(peak %in% "yes") %>%
+  group_by(stand, plotid) %>%
+  arrange(desc(year)) %>%
+  summarise(my_rec_year = first(year),
+            my_rec_sev = first(kde)) %>%
+  ungroup()
+
+max_dis <- plot_level %>%
+  filter(peak %in% "yes") %>%
+  group_by(stand, plotid) %>%
+  arrange(desc(kde)) %>%
+  summarise(my_max_year = first(year),
+            my_max_sev = first(kde)) %>%
+  ungroup()
+
+n_peak <- plot_level %>%
+    filter(peak %in% "yes") %>%
+  group_by(plotid) %>%
+  reframe(n_peak = n(),
+            chron_length = year_max-year_min,
+            freq = n_peak/chron_length) %>%
+  distinct(.,plotid, .keep_all = TRUE)
+
+decadal_mean<-plot_level %>%
+  mutate(decade = floor(year/10)*10) %>%
+  group_by(stand, plotid, decade) %>%
+  summarise(ca_pct_sum = sum(ca_pct),
+            kde_mn = mean(kde),
+            kde_sd = sd(kde)) %>%
+  ungroup() %>%
+  group_by(stand, plotid) %>%
+  summarise(decade_mn = mean(kde_mn),
+            # kde_sd = sd(kde_sd),
+            n_decade = n()) %>%
+  arrange(n_decade)
+
+dist_joined <-  max_dis %>%
+  inner_join(., rec_dis, by = c("stand", "plotid")) %>%
+  inner_join(.,  n_peak, by = "plotid") %>%
+  right_join(., decadal_mean, by = c("stand", "plotid"))
+
+remove(rec_dis, n_peak, max_dis, decadal_mean)
+
+write_csv(dist_joined,file="Data/disturbance.csv")
+```
+
+:::
+
+# Close database connection
+
+```{r}
+poolClose(KELuser)
+```
+

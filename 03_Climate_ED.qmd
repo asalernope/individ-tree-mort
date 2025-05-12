@@ -1,0 +1,84 @@
+---
+title: "Climate Exploration"
+format:
+  html:
+    theme: spacelab
+    toc: true
+    number-sections: true
+---
+
+```{r}
+library(reshape2)
+library(tidyverse)
+library(ggplot2)
+```
+
+
+```{r}
+rm(list=ls())
+
+#  set user computer
+computer <- "~"
+
+#  directores
+if(computer == "~"){
+  Dir.Base <- "~/Desktop/Prague/mort-likelihood"
+}else{
+  Dir.Base <- "insert path"
+}
+Dir.Data <- file.path(Dir.Base, "Data")
+Dir.Code <- file.path(Dir.Base, "Code")
+Dir.Clim <- file.path(Dir.Data,"Climate")
+Dir.Dist <- file.path(Dir.Data,"Disturbance")
+
+Dir_list <- c(Dir.Base, Dir.Data, Dir.Code, Dir.Clim, Dir.Dist)
+
+for(index in 1:length(Dir_list))   # using loop instead of sapply
+{  Dir_sel <- Dir_list[index]   # select directories one by one
+   if(!dir.exists(Dir_sel)) { dir.create(Dir_sel) }
+}
+```
+
+
+```{r}
+plot_clim <- load(file=file.path(Dir.Clim,"2_Plot_terra_climate_compiled_by_month_1970_to_2023.Rdata"))
+plot_clim <- get(plot_clim)
+rm(plot_clim_array)
+
+plot.id.1 <-  tbl(KELuser, "plot") %>%
+  filter(ownership %in% 1,
+          country %in% c("Albania", "Bosnia", "Bulgaria", "Croatia", "Romania"),
+         foresttype %in% c("beech"),
+        plottype %in% c(3, 4),
+         census %in% c(1),
+         !is.na(lng),
+         !is.na(lat)) %>%
+ filter(!location %in% c("Fagaras", "Maramures")) %>%
+select(plotid, location, slope, aspect, country, stand, altitude_m) %>%
+  collect()
+
+
+plot_clim %>%
+  right_join(., plot.id.1, by = "plotid") %>%
+  filter(month %in% 7, year %in% 2005) %>%
+ggplot() +
+  geom_point(aes(x= altitude_m,y = tmax, color = stand, group = plotid))
+  geom_line(aes(year, tmax, group = plotid)) +
+    geom_line(aes(year, tmin, group = plotid, color = "blue")) +
+  facet_wrap(~stand)+
+  theme_bw()
+```
+
+```{r}
+plot_clim %>%
+  right_join(., plot.id.1, by = "plotid") %>%
+  filter(Season %in% c( "summer"),
+         year > 2010, 
+         year < 2020) %>%
+  group_by(stand,altitude_m,plotid,year) %>%
+  summarise(def = mean(def)) %>%
+ggplot(aes(year, def)) +
+  geom_line(aes(group = plotid, color = altitude_m)) +
+  geom_smooth(method = "lm")+
+  facet_wrap(~stand)
+```

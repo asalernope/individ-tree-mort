@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.551">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>B2_Disturbance_Plot_Level</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="B2_Plot_Disturbance_files/libs/clipboard/clipboard.min.js"></script>
+<script src="B2_Plot_Disturbance_files/libs/quarto-html/quarto.js"></script>
+<script src="B2_Plot_Disturbance_files/libs/quarto-html/popper.min.js"></script>
+<script src="B2_Plot_Disturbance_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="B2_Plot_Disturbance_files/libs/quarto-html/anchor.min.js"></script>
+<link href="B2_Plot_Disturbance_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="B2_Plot_Disturbance_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="B2_Plot_Disturbance_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="B2_Plot_Disturbance_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="B2_Plot_Disturbance_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview"><span class="header-section-number">1</span> Overview</a></li>
+  <li><a href="#gather-data-identifiers" id="toc-gather-data-identifiers" class="nav-link" data-scroll-target="#gather-data-identifiers"><span class="header-section-number">2</span> Gather data &amp; identifiers</a>
+  <ul class="collapse">
+  <li><a href="#packages" id="toc-packages" class="nav-link" data-scroll-target="#packages"><span class="header-section-number">2.1</span> Packages</a></li>
+  <li><a href="#database-pull" id="toc-database-pull" class="nav-link" data-scroll-target="#database-pull"><span class="header-section-number">2.2</span> Database Pull</a></li>
+  <li><a href="#identifiers" id="toc-identifiers" class="nav-link" data-scroll-target="#identifiers"><span class="header-section-number">2.3</span> Identifiers</a></li>
+  </ul></li>
+  <li><a href="#tree-level-disturbance" id="toc-tree-level-disturbance" class="nav-link" data-scroll-target="#tree-level-disturbance"><span class="header-section-number">3</span> Tree-level disturbance</a>
+  <ul class="collapse">
+  <li><a href="#growth-reconstruction" id="toc-growth-reconstruction" class="nav-link" data-scroll-target="#growth-reconstruction"><span class="header-section-number">3.1</span> Growth reconstruction</a></li>
+  <li><a href="#identify-events---gap-ascension" id="toc-identify-events---gap-ascension" class="nav-link" data-scroll-target="#identify-events---gap-ascension"><span class="header-section-number">3.2</span> Identify events - gap ascension</a></li>
+  </ul></li>
+  <li><a href="#plot-level" id="toc-plot-level" class="nav-link" data-scroll-target="#plot-level"><span class="header-section-number">4</span> Plot level</a>
+  <ul class="collapse">
+  <li><a href="#crown-area" id="toc-crown-area" class="nav-link" data-scroll-target="#crown-area"><span class="header-section-number">4.1</span> Crown area</a></li>
+  <li><a href="#sampled-unsampled" id="toc-sampled-unsampled" class="nav-link" data-scroll-target="#sampled-unsampled"><span class="header-section-number">4.2</span> Sampled &amp; unsampled</a></li>
+  </ul></li>
+  <li><a href="#bootstrapping-plot-level" id="toc-bootstrapping-plot-level" class="nav-link" data-scroll-target="#bootstrapping-plot-level"><span class="header-section-number">5</span> Bootstrapping plot-level</a></li>
+  <li><a href="#kernel-density-estimation-peak-detection" id="toc-kernel-density-estimation-peak-detection" class="nav-link" data-scroll-target="#kernel-density-estimation-peak-detection"><span class="header-section-number">6</span> Kernel density estimation &amp; peak detection</a></li>
+  <li><a href="#plot-disturbance-at-the-plot-level" id="toc-plot-disturbance-at-the-plot-level" class="nav-link" data-scroll-target="#plot-disturbance-at-the-plot-level"><span class="header-section-number">7</span> Plot disturbance at the plot level</a></li>
+  <li><a href="#close-database-connection" id="toc-close-database-connection" class="nav-link" data-scroll-target="#close-database-connection"><span class="header-section-number">8</span> Close database connection</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">B2_Disturbance_Plot_Level</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="overview" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Overview</h1>
+<p>In this document, I will calculate canopy disturbance percentages from tree level up to plot level across the Balkan countries: Bosnia and Herzegovina, Albania, Bulgaria, and Croatia and the Semenic stand from Romania.</p>
+</section>
+<section id="gather-data-identifiers" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Gather data &amp; identifiers</h1>
+<section id="packages" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="packages"><span class="header-section-number">2.1</span> Packages</h2>
+</section>
+<section id="database-pull" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="database-pull"><span class="header-section-number">2.2</span> Database Pull</h2>
+<p><strong>Pull from source that contains functions utilized in this code</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"B00_disturbance_functions.R"</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>full_trees_dist <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"Data/full_trees_dist.csv"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>New names:
+Rows: 19214 Columns: 41
+── Column specification
+──────────────────────────────────────────────────────── Delimiter: "," chr
+(13): treeid, species, treetype, location, stand, plotid, sp_group_dist,... dbl
+(28): ...1, tree_id, plot_id, growth, layer, onplot, x_m, y_m, dbh_mm, d...
+ℹ Use `spec()` to retrieve the full column specification for this data. ℹ
+Specify the column types or set `show_col_types = FALSE` to quiet this message.
+• `` -&gt; `...1`</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>balk_dist_param <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"Data/balk_dist_param.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Rows: 5 Columns: 5
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr (1): sp_group_dist
+dbl (4): gapmaker_age, dbh_mm, gap_mm, ai_mm
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+</div>
+<p><strong>Database access</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to the database</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>KELuser <span class="ot">&lt;-</span> <span class="fu">dbPool</span>(RPostgreSQL<span class="sc">::</span><span class="fu">PostgreSQL</span>(),</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>                  <span class="at">dbname =</span> <span class="st">'remoteforestsorg'</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>                  <span class="at">host =</span> <span class="st">'91.239.201.14'</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>                  <span class="at">port =</span> <span class="dv">4010</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>                  <span class="at">user =</span> <span class="st">'remoteforests002'</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>                  <span class="at">password =</span> <span class="st">'COVBtxQ5'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="identifiers" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="identifiers"><span class="header-section-number">2.3</span> Identifiers</h2>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Plot ID</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Tree ID</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false" href="">Core ID</a></li></ul>
+<div class="tab-content">
+<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>plot.id <span class="ot">&lt;-</span> <span class="fu">tbl</span>(KELuser, <span class="st">"plot"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ownership <span class="sc">%in%</span> <span class="dv">1</span>,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>          country <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Albania"</span>, <span class="st">"Bosnia"</span>, <span class="st">"Croatia"</span>, <span class="st">"Romania"</span>, <span class="st">"Bulgaria"</span>),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>          foresttype <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"beech"</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>          plottype <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">4</span>),</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>         census <span class="sc">%in%</span> <span class="dv">1</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span><span class="fu">is.na</span>(lng),</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span><span class="fu">is.na</span>(lat)) <span class="sc">%&gt;%</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a> <span class="fu">filter</span>(<span class="sc">!</span>location <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Fagaras"</span>, <span class="st">"Maramures"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="fu">pull</span>(id)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: &lt;PostgreSQLConnection&gt; uses an old dbplyr interface
+ℹ Please install a newer version of the package or contact the maintainer
+This warning is displayed once every 8 hours.</code></pre>
+</div>
+</div>
+</div>
+<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>tree.id_cen1 <span class="ot">&lt;-</span> full_trees_dist <span class="sc">%&gt;%</span> </span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dbh_mm <span class="sc">&gt;=</span> <span class="dv">60</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span>status <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">10</span>, <span class="dv">15</span>, <span class="dv">99</span>),</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>         growth <span class="sc">%in%</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">99</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>         treetype <span class="sc">%in%</span> <span class="st">"0"</span> <span class="sc">&amp;</span> onplot <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>) <span class="sc">|</span> treetype <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"m"</span>, <span class="st">"x"</span>),</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span>species <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Lians"</span>, <span class="st">"99"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a> <span class="fu">pull</span>(tree_id)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>tree.id <span class="ot">&lt;-</span> <span class="fu">tbl</span>(KELuser, <span class="st">"tree"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(dbh_mm <span class="sc">&gt;=</span> <span class="dv">60</span>,</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span>status <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">10</span>, <span class="dv">15</span>, <span class="dv">99</span>),</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>         growth <span class="sc">%in%</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">99</span>),</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>          treetype <span class="sc">%in%</span> <span class="st">"0"</span> <span class="sc">&amp;</span> onplot <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>) <span class="sc">|</span> treetype <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"m"</span>, <span class="st">"x"</span>),</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span>species <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Lians"</span>, <span class="st">"99"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(id)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>core.id <span class="ot">&lt;-</span> <span class="fu">tbl</span>(KELuser, <span class="st">"core"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(coretype <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>),</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span>crossdated <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">12</span>, <span class="dv">20</span><span class="sc">:</span><span class="dv">22</span>, <span class="dv">99</span>),</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span>corestatus <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>),</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span><span class="fu">is.na</span>(missing_mm),</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span><span class="fu">is.na</span>(missing_years),</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>         missing_mm <span class="sc">&lt;</span> <span class="dv">30</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>         missing_years <span class="sc">&lt;</span> <span class="dv">30</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(id)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="tree-level-disturbance" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Tree-level disturbance</h1>
+<p><strong>Create data list</strong></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>ID <span class="ot">&lt;-</span> <span class="fu">tbl</span>(KELuser, <span class="st">"core"</span>) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(id <span class="sc">%in%</span> core.id) <span class="sc">%&gt;%</span> <span class="co"># 4393</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"tree"</span>) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(id <span class="sc">%in%</span> tree.id_cen1), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"tree_id"</span> <span class="ot">=</span> <span class="st">"id"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"plot"</span>) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(id <span class="sc">%in%</span> plot.id), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"plot_id"</span> <span class="ot">=</span> <span class="st">"id"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(id)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>ID.db <span class="ot">&lt;-</span> <span class="fu">tbl</span>(KELuser, <span class="st">"core"</span>) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(id <span class="sc">%in%</span> core.id) <span class="sc">%&gt;%</span> <span class="co"># 3109</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"tree"</span>) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(id <span class="sc">%in%</span> tree.id), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"tree_id"</span> <span class="ot">=</span> <span class="st">"id"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"plot"</span>) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(id <span class="sc">%in%</span> plot.id), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"plot_id"</span> <span class="ot">=</span> <span class="st">"id"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(id)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>data.list <span class="ot">&lt;-</span> <span class="fu">distGetData</span>(<span class="at">ID =</span> ID)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Rows: 5 Columns: 5
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr (1): sp_group_dist
+dbl (4): gapmaker_age, dbh_mm, gap_mm, ai_mm
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>data.list.db <span class="ot">&lt;-</span> <span class="fu">distGetData</span>(<span class="at">ID =</span> ID.db)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Rows: 5 Columns: 5
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr (1): sp_group_dist
+dbl (4): gapmaker_age, dbh_mm, gap_mm, ai_mm
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+</div>
+<section id="growth-reconstruction" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="growth-reconstruction"><span class="header-section-number">3.1</span> Growth reconstruction</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>data.growth <span class="ot">&lt;-</span> <span class="fu">growthCalculate</span>(<span class="at">data =</span> data.list, <span class="at">windowLength =</span> <span class="dv">10</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>data.growth.db <span class="ot">&lt;-</span> <span class="fu">growthCalculate</span>(<span class="at">data =</span> data.list.db, <span class="at">windowLength =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="identify-events---gap-ascension" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="identify-events---gap-ascension"><span class="header-section-number">3.2</span> Identify events - gap ascension</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>data.event1 <span class="ot">&lt;-</span> <span class="fu">eventCalculate</span>(<span class="at">data =</span> data.growth, <span class="at">gapAge =</span> <span class="fu">c</span>(<span class="dv">5</span><span class="sc">:</span><span class="dv">14</span>), <span class="at">nprol =</span> <span class="dv">7</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`summarise()` has grouped output by 'core_id'. You can override using the
+`.groups` argument.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>data.event.db <span class="ot">&lt;-</span> <span class="fu">eventCalculate</span>(<span class="at">data =</span> data.growth.db, <span class="at">gapAge =</span> <span class="fu">c</span>(<span class="dv">5</span><span class="sc">:</span><span class="dv">14</span>), <span class="at">nprol =</span> <span class="dv">7</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`summarise()` has grouped output by 'core_id'. You can override using the
+`.groups` argument.</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>data.event <span class="ot">&lt;-</span> data.event1 <span class="sc">%&gt;%</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(., full_trees_dist, <span class="at">by =</span> <span class="st">"tree_id"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">full_join</span>(., balk_dist_param <span class="sc">%&gt;%</span> <span class="fu">select</span>(sp_group_dist, <span class="at">dbh_thres =</span> dbh_mm), <span class="at">by =</span> <span class="st">"sp_group_dist"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>   <span class="fu">filter</span>(tree_id <span class="sc">%in%</span> data.event.db<span class="sc">$</span>tree_id <span class="sc">|</span> growth <span class="sc">%in%</span> <span class="dv">1</span><span class="sc">|</span> (event <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"release"</span>, <span class="st">"gap"</span>) <span class="sc">&amp;</span> dbh_mm <span class="sc">&gt;=</span> dbh_thres)) <span class="sc">%&gt;%</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(tree_id, year, event)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="plot-level" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Plot level</h1>
+<section id="crown-area" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="crown-area"><span class="header-section-number">4.1</span> Crown area</h2>
+<p>Crown area is constructed through a linear model whereby canopy area is predicted by dbh_mm taking stand, subplot, and plot into account. There is an individual model for coniferous and broadleaf species.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>data.ca <span class="ot">&lt;-</span> <span class="fu">tbl</span>(KELuser, <span class="st">"dist_data_ca"</span>) <span class="sc">%&gt;%</span> <span class="fu">select</span>(stand, subplot, plotid, sp_type, dbh_mm, ca_m2) <span class="sc">%&gt;%</span> <span class="fu">collect</span>()</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>data.conif <span class="ot">&lt;-</span> data.ca <span class="sc">%&gt;%</span> <span class="fu">filter</span>(sp_type <span class="sc">%in%</span> <span class="st">"coniferous"</span>)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>conif <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">sqrt</span>(ca_m2) <span class="sc">~</span> dbh_mm <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>stand) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>subplot) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>plotid), <span class="at">data =</span> data.conif)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>data.broad <span class="ot">&lt;-</span> data.ca <span class="sc">%&gt;%</span> <span class="fu">filter</span>(sp_type <span class="sc">%in%</span> <span class="st">"broadleaved"</span>)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>broad <span class="ot">&lt;-</span> <span class="fu">lmer</span>(<span class="fu">sqrt</span>(ca_m2) <span class="sc">~</span> dbh_mm <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>stand) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>subplot) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">|</span>plotid), <span class="at">data =</span> data.broad)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="sampled-unsampled" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="sampled-unsampled"><span class="header-section-number">4.2</span> Sampled &amp; unsampled</h2>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-2-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-1" role="tab" aria-controls="tabset-2-1" aria-selected="true" href="">Sampled trees</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-2" role="tab" aria-controls="tabset-2-2" aria-selected="false" href="">Unsampled trees</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-3" role="tab" aria-controls="tabset-2-3" aria-selected="false" href="">Combined &amp; canopy area calculation</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-4" role="tab" aria-controls="tabset-2-4" aria-selected="false" href="">Look at prop of canopy trees sampled</a></li></ul>
+<div class="tab-content">
+<div id="tabset-2-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-2-1-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>data.sampled <span class="ot">&lt;-</span> data.event <span class="sc">%&gt;%</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"core"</span>) <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="at">core_id =</span> id, tree_id), <span class="at">by =</span> <span class="st">"tree_id"</span>, <span class="at">copy =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"ring"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>              <span class="fu">group_by</span>(core_id) <span class="sc">%&gt;%</span> <span class="fu">summarise</span>(<span class="at">year_min =</span> <span class="fu">min</span>(year), <span class="at">year_max =</span> <span class="fu">max</span>(year) <span class="sc">-</span> <span class="dv">10</span>),</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>             <span class="at">by =</span> <span class="st">"core_id"</span>, <span class="at">copy =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="fu">filter</span>(<span class="sc">!</span>(year_min <span class="sc">&gt;</span> year_max <span class="sc">&amp;</span> year <span class="sc">&gt;</span> year_max)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., full_trees_dist <span class="sc">%&gt;%</span> <span class="fu">select</span>(plot_id, growth, treeid, tree_id, sp_type, species, sp_group_dist, dbh_mm, layer), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"tree_id"</span> <span class="ot">=</span> <span class="st">"tree_id"</span>), <span class="at">copy =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a> <span class="fu">distinct</span>(., plot_id, tree_id, year_min, year_max) <span class="sc">%&gt;%</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>     <span class="fu">collect</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(plot_id) <span class="sc">%&gt;%</span>  <span class="co"># filter plots by the minimum number of usable cores</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">n</span>() <span class="sc">&gt;=</span> <span class="dv">6</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"plot"</span>) <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>stand, <span class="sc">-</span>subplot), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"plot_id"</span> <span class="ot">=</span> <span class="st">"id"</span>), <span class="at">copy =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"spatial_hierarchy"</span>), <span class="at">by =</span> <span class="st">"plotid"</span>, <span class="at">copy =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., full_trees_dist <span class="sc">%&gt;%</span> <span class="fu">select</span>(plot_id, growth, treeid, tree_id, sp_type, species, sp_group_dist, dbh_mm, layer), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"tree_id"</span> <span class="ot">=</span> <span class="st">"tree_id"</span>, <span class="st">"plot_id"</span>), <span class="at">copy =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a><span class="co">#  inner_join(., tbl(KELuser, "species_fk"), by = c("species" = "id"), copy = TRUE) %&gt;%</span></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., data.event, <span class="at">by =</span> <span class="st">"tree_id"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a> <span class="fu">select</span>(country, stand, subplot, plotid, plot_id, growth, treeid, tree_id, sp_type, species, dbh_mm, year_min, year_max, event, year, date) <span class="sc">%&gt;%</span></span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">collect</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Missing values are always removed in SQL aggregation functions.
+Use `na.rm = TRUE` to silence this warning
+This warning is displayed once every 8 hours.</code></pre>
+</div>
+</div>
+</div>
+<div id="tabset-2-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-2-tab">
+<p>The unsampled trees have unusable cores and are located on the plot - should also be canopy level trees.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>data.unsampled <span class="ot">&lt;-</span> <span class="fu">tbl</span>(KELuser, <span class="st">"core"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(coretype <span class="sc">%in%</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">collect</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">right_join</span>(., full_trees_dist <span class="sc">%&gt;%</span> </span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>               <span class="fu">select</span>(tree_id, treeid, growth, status, layer, species, dbh_mm, plot_id) <span class="sc">%&gt;%</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>               <span class="fu">filter</span>(tree_id <span class="sc">%in%</span> tree.id_cen1,</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>                  growth <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>), <span class="co">#| (growth %in% 0 &amp; tree_id %in% data.event1$tree_id),</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>                    <span class="sc">!</span>tree_id <span class="sc">%in%</span> <span class="fu">local</span>(data.sampled<span class="sc">$</span>tree_id)), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"tree_id"</span> <span class="ot">=</span> <span class="st">"tree_id"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"tree"</span>) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(id <span class="sc">%in%</span> <span class="fu">local</span>(data.sampled<span class="sc">$</span>tree_id)) <span class="sc">%&gt;%</span> <span class="fu">distinct</span>(., plot_id), <span class="at">by =</span> <span class="st">"plot_id"</span>, <span class="at">copy =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"plot"</span>), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"plot_id"</span> <span class="ot">=</span> <span class="st">"id"</span>), <span class="at">copy =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>((foresttype <span class="sc">%in%</span> <span class="st">"spruce"</span> <span class="sc">&amp;</span> <span class="sc">!</span>stand <span class="sc">%in%</span> <span class="st">"Polana"</span> <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(subcore)) <span class="sc">|</span> ((foresttype <span class="sc">%in%</span> <span class="st">"beech"</span> <span class="sc">|</span> stand <span class="sc">%in%</span> <span class="st">"Polana"</span>) <span class="sc">&amp;</span> (status <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>) <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(subcore)))) <span class="sc">%&gt;%</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>stand, <span class="sc">-</span>subplot) <span class="sc">%&gt;%</span></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"spatial_hierarchy"</span>), <span class="at">by =</span> <span class="st">"plotid"</span>, <span class="at">copy =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., <span class="fu">tbl</span>(KELuser, <span class="st">"species_fk"</span>), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"species"</span> <span class="ot">=</span> <span class="st">"id"</span>), <span class="at">copy =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">year_min =</span> <span class="dv">0</span>,</span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>         <span class="at">year_max =</span> <span class="dv">0</span>,</span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>         <span class="at">event =</span> <span class="st">"unsampled"</span>,</span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>         <span class="at">year =</span> <span class="dv">0</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a> <span class="fu">select</span>(country, stand, subplot, plotid, plot_id, growth, treeid, tree_id, sp_type, species, dbh_mm, year_min, year_max, event, year, date) <span class="sc">%&gt;%</span></span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">collect</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<div id="tabset-2-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-3-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>data.all <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(data.sampled, data.unsampled) <span class="sc">%&gt;%</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">ca_m2 =</span> <span class="fu">case_when</span>(</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>          sp_type <span class="sc">%in%</span> <span class="st">"broadleaved"</span> <span class="sc">~</span> <span class="fu">predict</span>(<span class="at">object =</span> broad, <span class="at">newdata =</span> ., <span class="at">allow.new.levels =</span> T),</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>          sp_type <span class="sc">%in%</span> <span class="st">"coniferous"</span> <span class="sc">~</span>  <span class="fu">predict</span>(<span class="at">object =</span> conif, <span class="at">newdata =</span> ., <span class="at">allow.new.levels =</span> T)),</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">ca_m2 =</span> ca_m2<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(data.all,<span class="at">file=</span><span class="st">"Data/used.dist.trees.csv"</span>) </span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>data.all<span class="ot">&lt;-</span><span class="fu">read_csv</span>(<span class="st">"Data/used.dist.trees.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Rows: 6404 Columns: 17
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr (8): country, stand, subplot, plotid, treeid, sp_type, species, event
+dbl (9): plot_id, growth, tree_id, dbh_mm, year_min, year_max, year, date, c...
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+</div>
+</div>
+<div id="tabset-2-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-4-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>samp.can <span class="ot">&lt;-</span> data.sampled <span class="sc">%&gt;%</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">ca_m2 =</span> <span class="fu">case_when</span>(</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>          sp_type <span class="sc">%in%</span> <span class="st">"broadleaved"</span> <span class="sc">~</span> <span class="fu">predict</span>(<span class="at">object =</span> broad, <span class="at">newdata =</span> ., <span class="at">allow.new.levels =</span> T),</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>          sp_type <span class="sc">%in%</span> <span class="st">"coniferous"</span> <span class="sc">~</span>  <span class="fu">predict</span>(<span class="at">object =</span> conif, <span class="at">newdata =</span> ., <span class="at">allow.new.levels =</span> T)),</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">ca_m2 =</span> ca_m2<span class="sc">^</span><span class="dv">2</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(plotid) <span class="sc">%&gt;%</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">count =</span> <span class="fu">n</span>(),</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>            <span class="at">samp =</span> <span class="fu">sum</span>(ca_m2))</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>try <span class="ot">&lt;-</span> data.all <span class="sc">%&gt;%</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(plotid) <span class="sc">%&gt;%</span></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(),</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>             <span class="at">ca_pct =</span> <span class="fu">sum</span>(ca_m2)) <span class="sc">%&gt;%</span></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., samp.can, <span class="at">by =</span> <span class="st">"plotid"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">prop =</span> count<span class="sc">/</span>n,</span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>         <span class="at">perc =</span> samp<span class="sc">/</span>ca_pct)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="bootstrapping-plot-level" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Bootstrapping plot-level</h1>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-3-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-1" role="tab" aria-controls="tabset-3-1" aria-selected="true" href="">Calculate canopy disturbance percentage</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-2" role="tab" aria-controls="tabset-3-2" aria-selected="false" href="">Fill the period</a></li></ul>
+<div class="tab-content">
+<div id="tabset-3-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-3-1-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>data.boot <span class="ot">&lt;-</span> data.all <span class="sc">%&gt;%</span> </span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(., plotid, tree_id) <span class="sc">%&gt;%</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(.), <span class="at">each =</span> <span class="dv">1000</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">rep =</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">1000</span>, <span class="at">times =</span> <span class="fu">nrow</span>(.) <span class="sc">/</span> <span class="dv">1000</span>)) </span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>data.dist.boot <span class="ot">&lt;-</span> data.boot <span class="sc">%&gt;%</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(plotid, rep) <span class="sc">%&gt;%</span></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># size of bootstrapping subsamples = maximum common number of tree records per plot (sampled + unsampled) - raise overlap??? </span></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_sample</span>(., <span class="at">n =</span> <span class="dv">10</span>, <span class="at">replace =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(., data.all <span class="sc">%&gt;%</span> <span class="fu">select</span>(plotid, tree_id, year_min, year_max, event, year, ca_m2), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"plotid"</span>, <span class="st">"tree_id"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">do</span>({</span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>    x <span class="ot">&lt;-</span> .</span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a>    x1 <span class="ot">&lt;-</span> x <span class="sc">%&gt;%</span> </span>
+<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(<span class="sc">!</span>event <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"unsampled"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">group_by</span>(plotid, rep, year) <span class="sc">%&gt;%</span> </span>
+<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a>      <span class="fu">summarise</span>(<span class="at">ca_event =</span> <span class="fu">sum</span>(ca_m2)) <span class="sc">%&gt;%</span></span>
+<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ungroup</span>()</span>
+<span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a>    x2 <span class="ot">&lt;-</span> x <span class="sc">%&gt;%</span> </span>
+<span id="cb27-25"><a href="#cb27-25" aria-hidden="true" tabindex="-1"></a>      <span class="fu">group_by</span>(plotid, rep, tree_id) <span class="sc">%&gt;%</span> </span>
+<span id="cb27-26"><a href="#cb27-26" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(year <span class="sc">%in%</span> <span class="fu">first</span>(year)) <span class="sc">%&gt;%</span> </span>
+<span id="cb27-27"><a href="#cb27-27" aria-hidden="true" tabindex="-1"></a>      <span class="fu">group_by</span>(plotid, rep) <span class="sc">%&gt;%</span> </span>
+<span id="cb27-28"><a href="#cb27-28" aria-hidden="true" tabindex="-1"></a>      <span class="fu">summarise</span>(<span class="at">ca_total =</span> <span class="fu">sum</span>(ca_m2)) <span class="sc">%&gt;%</span></span>
+<span id="cb27-29"><a href="#cb27-29" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ungroup</span>()</span>
+<span id="cb27-30"><a href="#cb27-30" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb27-31"><a href="#cb27-31" aria-hidden="true" tabindex="-1"></a>    x3 <span class="ot">&lt;-</span> x <span class="sc">%&gt;%</span> </span>
+<span id="cb27-32"><a href="#cb27-32" aria-hidden="true" tabindex="-1"></a>      <span class="fu">group_by</span>(plotid, rep, tree_id) <span class="sc">%&gt;%</span> </span>
+<span id="cb27-33"><a href="#cb27-33" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(<span class="sc">!</span>event <span class="sc">%in%</span> <span class="st">"unsampled"</span>, </span>
+<span id="cb27-34"><a href="#cb27-34" aria-hidden="true" tabindex="-1"></a>             year <span class="sc">%in%</span> <span class="fu">first</span>(year)) <span class="sc">%&gt;%</span> </span>
+<span id="cb27-35"><a href="#cb27-35" aria-hidden="true" tabindex="-1"></a>      <span class="fu">group_by</span>(plotid, rep) <span class="sc">%&gt;%</span> </span>
+<span id="cb27-36"><a href="#cb27-36" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(<span class="fu">n</span>() <span class="sc">&gt;=</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb27-37"><a href="#cb27-37" aria-hidden="true" tabindex="-1"></a>      <span class="fu">summarise</span>(<span class="at">year_min =</span> <span class="fu">min</span>(year_min),</span>
+<span id="cb27-38"><a href="#cb27-38" aria-hidden="true" tabindex="-1"></a>                <span class="at">year_max =</span> <span class="fu">max</span>(year_max),</span>
+<span id="cb27-39"><a href="#cb27-39" aria-hidden="true" tabindex="-1"></a>                <span class="at">ncores =</span> <span class="fu">n</span>()) <span class="sc">%&gt;%</span></span>
+<span id="cb27-40"><a href="#cb27-40" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ungroup</span>()</span>
+<span id="cb27-41"><a href="#cb27-41" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb27-42"><a href="#cb27-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(x1, x2 <span class="sc">%&gt;%</span> <span class="fu">inner_join</span>(., x3, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"plotid"</span>, <span class="st">"rep"</span>)), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"plotid"</span>, <span class="st">"rep"</span>))</span>
+<span id="cb27-43"><a href="#cb27-43" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">%&gt;%</span></span>
+<span id="cb27-44"><a href="#cb27-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">ca_pct =</span> ca_event <span class="sc">*</span> <span class="dv">100</span> <span class="sc">/</span> ca_total)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<div id="tabset-3-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-2-tab">
+<div class="cell">
+<div class="cell-output cell-output-stderr">
+<pre><code>`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.
+`summarise()` has grouped output by 'plotid'. You can override using the
+`.groups` argument.</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="kernel-density-estimation-peak-detection" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Kernel density estimation &amp; peak detection</h1>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-4-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-1" role="tab" aria-controls="tabset-4-1" aria-selected="true" href="">Full chronologies</a></li></ul>
+<div class="tab-content">
+<div id="tabset-4-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-4-1-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>data.kde.full <span class="ot">&lt;-</span> data.dist <span class="sc">%&gt;%</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">&gt;=</span> year_min, year <span class="sc">&lt;=</span> year_max) <span class="sc">%&gt;%</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(plotid) <span class="sc">%&gt;%</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">complete</span>(<span class="at">year =</span> (<span class="fu">min</span>(year)<span class="sc">-</span><span class="dv">30</span>)<span class="sc">:</span>(<span class="fu">max</span>(year)<span class="sc">+</span><span class="dv">30</span>), <span class="at">fill =</span> <span class="fu">list</span>(<span class="at">ca_pct =</span> <span class="dv">0</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">kde =</span> <span class="fu">kdeFun</span>(ca_pct, <span class="at">k =</span> <span class="dv">30</span>, <span class="at">bw =</span> <span class="dv">5</span>, <span class="at">st =</span> <span class="dv">7</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">%in%</span> <span class="fu">c</span>((<span class="fu">min</span>(year)<span class="sc">+</span><span class="dv">15</span>)<span class="sc">:</span>(<span class="fu">max</span>(year)<span class="sc">-</span><span class="dv">10</span>))) <span class="sc">%&gt;%</span></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">type =</span> <span class="st">"full"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: There were 68704 warnings in `mutate()`.
+The first warning was:
+ℹ In argument: `kde = kdeFun(ca_pct, k = 30, bw = 5, st = 7)`.
+ℹ In group 1: `plotid = "ALB_CUR_001_1"`.
+Caused by warning in `density.default()`:
+! sum(weights) != 1  -- will not get true density
+ℹ Run `dplyr::last_dplyr_warnings()` to see the 68703 remaining warnings.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>data.peaks.full <span class="ot">&lt;-</span> data.kde.full <span class="sc">%&gt;%</span> </span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(plotid) <span class="sc">%&gt;%</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">row_number</span>() <span class="sc">%in%</span> <span class="fu">peakDetection</span>(<span class="at">x =</span> kde, <span class="at">threshold =</span> <span class="dv">10</span>, <span class="at">nups =</span> <span class="dv">5</span>, <span class="at">mindist =</span> <span class="dv">10</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">type =</span> <span class="st">"full"</span>,</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">peak =</span> <span class="st">"yes"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="plot-disturbance-at-the-plot-level" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Plot disturbance at the plot level</h1>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-5-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-1" role="tab" aria-controls="tabset-5-1" aria-selected="true" href="">Prep data</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-2" role="tab" aria-controls="tabset-5-2" aria-selected="false" href="">Plot-level Disturbance</a></li></ul>
+<div class="tab-content">
+<div id="tabset-5-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-5-1-tab">
+<p>Below I plot the data for the data peaks.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>plot_level <span class="ot">&lt;-</span> data.kde.full <span class="sc">%&gt;%</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">drop_na</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(data.peaks.full <span class="sc">%&gt;%</span> <span class="fu">select</span>(peak, plotid, year), <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"plotid"</span>, <span class="st">"year"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">peak =</span> <span class="fu">ifelse</span>(peak <span class="sc">%in%</span> <span class="st">"yes"</span>, <span class="st">"yes"</span>, <span class="st">"no"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(data.sampled <span class="sc">%&gt;%</span> <span class="fu">distinct</span>(., stand, plotid), <span class="at">by =</span> <span class="st">"plotid"</span>)  <span class="sc">%&gt;%</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(plotid) <span class="sc">%&gt;%</span></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>year <span class="sc">&lt;</span> year_min, </span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>         <span class="sc">!</span>year <span class="sc">&gt;</span> year_max)</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(plot_level,<span class="at">file=</span><span class="st">"Data/plot_level.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<div id="tabset-5-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-5-2-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>plot_level <span class="sc">%&gt;%</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(peak <span class="sc">%in%</span> <span class="st">"yes"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 572 × 10
+# Groups:   plotid [206]
+   plotid         year ca_pct year_min year_max ncores   kde type  peak  stand  
+   &lt;chr&gt;         &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;  
+ 1 ALB_CUR_001_1  1889   0        1869     2005      6  13.3 full  yes   ALB-CUR
+ 2 ALB_CUR_001_1  1926   9.79     1869     2005      6  36.1 full  yes   ALB-CUR
+ 3 ALB_CUR_001_2  1890   0        1882     2005      5  17.1 full  yes   ALB-CUR
+ 4 ALB_CUR_001_2  1927   3.47     1882     2005      5  37.6 full  yes   ALB-CUR
+ 5 ALB_CUR_002_1  1878  10.3      1858     2005      7  29.7 full  yes   ALB-CUR
+ 6 ALB_CUR_002_1  1916   0        1858     2005      7  12.7 full  yes   ALB-CUR
+ 7 ALB_CUR_002_1  1949   0        1858     2005      7  16.2 full  yes   ALB-CUR
+ 8 ALB_CUR_002_2  1952   0        1875     2005      8  29.3 full  yes   ALB-CUR
+ 9 ALB_CUR_003_1  1910   2.88     1902     2005      8  16.9 full  yes   ALB-CUR
+10 ALB_CUR_003_1  1932   3.70     1902     2005      8  31.3 full  yes   ALB-CUR
+# ℹ 562 more rows</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>rec_dis <span class="ot">&lt;-</span> plot_level <span class="sc">%&gt;%</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(peak <span class="sc">%in%</span> <span class="st">"yes"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(stand, plotid) <span class="sc">%&gt;%</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(year)) <span class="sc">%&gt;%</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">my_rec_year =</span> <span class="fu">first</span>(year),</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">my_rec_sev =</span> <span class="fu">first</span>(kde)) <span class="sc">%&gt;%</span></span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`summarise()` has grouped output by 'stand'. You can override using the
+`.groups` argument.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>max_dis <span class="ot">&lt;-</span> plot_level <span class="sc">%&gt;%</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(peak <span class="sc">%in%</span> <span class="st">"yes"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(stand, plotid) <span class="sc">%&gt;%</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(kde)) <span class="sc">%&gt;%</span></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">my_max_year =</span> <span class="fu">first</span>(year),</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">my_max_sev =</span> <span class="fu">first</span>(kde)) <span class="sc">%&gt;%</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`summarise()` has grouped output by 'stand'. You can override using the
+`.groups` argument.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>n_peak <span class="ot">&lt;-</span> plot_level <span class="sc">%&gt;%</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(peak <span class="sc">%in%</span> <span class="st">"yes"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(plotid) <span class="sc">%&gt;%</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reframe</span>(<span class="at">n_peak =</span> <span class="fu">n</span>(),</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">chron_length =</span> year_max<span class="sc">-</span>year_min,</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">freq =</span> n_peak<span class="sc">/</span>chron_length) <span class="sc">%&gt;%</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(.,plotid, <span class="at">.keep_all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>decadal_mean<span class="ot">&lt;-</span>plot_level <span class="sc">%&gt;%</span></span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">decade =</span> <span class="fu">floor</span>(year<span class="sc">/</span><span class="dv">10</span>)<span class="sc">*</span><span class="dv">10</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(stand, plotid, decade) <span class="sc">%&gt;%</span></span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">ca_pct_sum =</span> <span class="fu">sum</span>(ca_pct),</span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>            <span class="at">kde_mn =</span> <span class="fu">mean</span>(kde),</span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>            <span class="at">kde_sd =</span> <span class="fu">sd</span>(kde)) <span class="sc">%&gt;%</span></span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(stand, plotid) <span class="sc">%&gt;%</span></span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">decade_mn =</span> <span class="fu">mean</span>(kde_mn),</span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>            <span class="co"># kde_sd = sd(kde_sd),</span></span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a>            <span class="at">n_decade =</span> <span class="fu">n</span>()) <span class="sc">%&gt;%</span></span>
+<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(n_decade)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`summarise()` has grouped output by 'stand', 'plotid'. You can override using
+the `.groups` argument.
+`summarise()` has grouped output by 'stand'. You can override using the
+`.groups` argument.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>dist_joined <span class="ot">&lt;-</span>  max_dis <span class="sc">%&gt;%</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(., rec_dis, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"stand"</span>, <span class="st">"plotid"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(.,  n_peak, <span class="at">by =</span> <span class="st">"plotid"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">right_join</span>(., decadal_mean, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"stand"</span>, <span class="st">"plotid"</span>))</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a><span class="fu">remove</span>(rec_dis, n_peak, max_dis, decadal_mean)</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(dist_joined,<span class="at">file=</span><span class="st">"Data/disturbance.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="close-database-connection" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Close database connection</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">poolClose</span>(KELuser)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
