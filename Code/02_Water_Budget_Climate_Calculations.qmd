@@ -18,14 +18,12 @@ rm(list=ls())
 
 #  set user computer
 computer <- "~"
-
 #  directores
 if(computer == "~"){
-  Dir.Base <- "~/Desktop/Prague/mort-likelihood"
+  Dir.Base <- "~/Desktop/Prague/mort-likelihood/individ-tree-mort"
 }else{
   Dir.Base <- "insert path"
 }
-
 Dir.Data <- file.path(Dir.Base, "Data")
 Dir.Code <- file.path(Dir.Base, "Code")
 Dir.Clim <- file.path(Dir.Data,"Climate")

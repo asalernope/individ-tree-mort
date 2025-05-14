@@ -19,9 +19,9 @@ librarian::shelf(lme4, dplyr, tidyverse, ggplot2, car, sjPlot, GGally,DHARMa,pRO
 *Data*
 ```{r}
 #load("~/Desktop/Prague/mort-likelihood/Data/9_Full_model_fitting_dataset.Rdata")
- load("~/Desktop/Prague/mort-likelihood/Data/9_Trees_with_derived_climate_variables.Rdata")
+ load("~/Desktop/Prague/mort-likelihood/individ-tree-mort/Data/9_Trees_with_derived_climate_variables.Rdata")
 
-load("~/Desktop/Prague/mort-likelihood/Data/Climate/TRY_climate_anom.Rdata")
+load("~/Desktop/Prague/mort-likelihood/individ-tree-mort/Climate/TRY_climate_anom.Rdata")
 
 
 trees <- trees %>% 

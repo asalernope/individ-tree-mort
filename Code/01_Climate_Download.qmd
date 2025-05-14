@@ -47,9 +47,10 @@ rm(list = ls())
 # Set base path depending on user
 computer <- "~"
 
-if (computer == "~") {
-  Dir.Base <- "~/Desktop/Prague/mort-likelihood"
-} else {
+#  directores
+if(computer == "~"){
+  Dir.Base <- "~/Desktop/Prague/mort-likelihood/individ-tree-mort"
+}else{
   Dir.Base <- "insert path"
 }
 

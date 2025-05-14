@@ -1,4 +1,4 @@
-﻿#########################################################
+#########################################################
 #  Compile species table
 #  wood density and specific leaf area values from:
 #    1. Forrester, et al. 2017. Generalized biomass and leaf area 
@@ -11,13 +11,14 @@
 rm(list=ls(all=TRUE))
 
 # User computer
-computer <- "arne"
+computer <- "~"
 
 # Directores
-if(computer == "arne"){
-	Dir.Root <- "/Users/arnebuechling/Documents/CULS/Projects_miro_lab_group/Audrey"
+#  directores
+if(computer == "~"){
+  Dir.Base <- "~/Desktop/Prague/mort-likelihood/individ-tree-mort"
 }else{
-	Dir.Root <- "insert path"
+  Dir.Base <- "insert path"
 }
 Dir.Base <- file.path(Dir.Root, "Mortality")
 Dir.Data <- file.path(Dir.Base, "Data")

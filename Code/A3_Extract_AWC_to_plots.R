@@ -18,8 +18,9 @@ rm(list=ls())
 computer <- "~"
 
 #  directores
+#  directores
 if(computer == "~"){
-  Dir.Base <- "~/Desktop/Prague/mort-likelihood"
+  Dir.Base <- "~/Desktop/Prague/mort-likelihood/individ-tree-mort"
 }else{
   Dir.Base <- "insert path"
 }

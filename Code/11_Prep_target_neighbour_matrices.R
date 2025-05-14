@@ -18,7 +18,7 @@ computer <- "~"
 
 #  directores
 if(computer == "~"){
-  Dir.Base <- "~/Desktop/Prague/mort-likelihood"
+  Dir.Base <- "~/Desktop/Prague/mort-likelihood/individ-tree-mort"
 }else{
   Dir.Base <- "insert path"
 }
@@ -67,7 +67,7 @@ neighbours_df <- subset(neighbours_df, !SPCD %in% c("ANGIO","LIANS","ACEHEL") ) 
 
 
 # load target tree data
-load("~/Desktop/Prague/mort-likelihood/Data/9_Trees_with_derived_climate_variables.Rdata")
+load("~/Desktop/Prague/mort-likelihood/individ-tree-mort/Data/9_Trees_with_derived_climate_variables.Rdata")
 
 # Calculate tree distance to plot centre
 trees$DIST_m <- neighdist(trees$x_m, trees$y_m, 0, 0)
@@ -198,45 +198,33 @@ for(index in 1:length(top_species)) {
 	save(targets,neighbours,distances,dbhs,species,trait_clust,nd,trait_class,kmeans.out,
 		 file=paste(spname,"Full_working_dataset_with_all_climate_variables.Rdata",sep="_"))
 
-} # species loop
-
-
-
-# lognormal size and nci (based on taxonomic similarity)
-# index lambda based on relatedness classes
-# 
-nci_spp <- function(lambda,alpha,beta)
-{ 
-  nci <- rowSums(lambda[species] * (dbhs ^ alpha)/(distances ^ beta), na.rm=T)
-}
-  
-
-
-# stand & lambda levels
-ns <- length(levels(targets$stand))
-nspp <- length(levels(neighbours[,names(neighbours) %in% "relatedness"]))
-
-var <- list(pred="predicted", observed="mort", stand="stand")
-
-# parameter limits
-par <- list(PS = rep(50,ns), sizeX0 = 0.1, sizeXb = 0.5, sizeXp = 0.5,
-            alpha = 2, beta = 1, C=1, gamma = 1, D = 2, lambda = rep(0.5,nspp) )
-
-par_lo <- list(PS = rep(10,ns), sizeX0 = 0, sizeXb = 0, sizeXp = 0,
-               alpha = 0, beta = 0, C=0, gamma = -1, D = 1, lambda = rep(0,nspp) )
-
-par_hi <- list(PS = rep(1000,ns), sizeX0 = 10000, sizeXb = 15000, sizeXp = 100,
-               alpha = 5, beta = 5, C=1000, gamma = 5, D = 10, lambda = rep(1.0,nspp) )
-
-m_size_nci_results <- anneal(model = m_size_nci_spp, par = par, var = var,source_data = targets,
-                             par_lo = par_lo, par_hi = par_hi, loglikelihood,
-                             dep_var = "mort", max_iter = iter, note = comment.txt)
-
-# save
-write_results(m_size_nci_results, file = paste(spname,"model_size_nci_spp_relatedness_results.txt"), data=T, print_whole_hist=T)
-save(m_size_nci_results, file=paste(spname,"model_size_nci_spp_relatedness_results.Rdata"))
-
-
+	
+# Calculate NCI for each individual 
+	
+	# focal species
+	spp_list <- c("ABIALB","FAGSYL","PICABI","ACEPSE")
+	
+	# select focal species
+	index <- 1
+	spname <- spp_list[index]
+	
+	# get model fitting data including neighbour matrices from step 11
+	filename <- "Full_working_dataset_with_all_climate_variables.Rdata"
+	load(file=file.path(Dir.Analysis.Files, paste(spname,filename,sep="_")))
+	
+	
+	# compute NCI assuming alpha = 2 beta = 1
+	alpha = 2
+	beta = 1
+	targets$NCI <- rowSums((dbhs^alpha)/(distances^beta), na.rm=T)
+	# targets$NCI_norm <- targets$NCI / max(targets$NCI)               #  normalize NCI I should merge all data and then normalize
+	# targets$NCI_negexp <- exp(-1 * targets$size_ratio * targets$NCI/max(targets$NCI ))  #  NCI fit to exponential function
+	targets$BA_m2_15m <- rowSums((pi*(dbhs/2)^2), na.rm=T)   # sum of neighbour basal area within 15 m
+	
+	summary(targets)
+	
+	
+	
 
 
 
