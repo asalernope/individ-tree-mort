@@ -1,5 +1,5 @@
 ---
-title: "GLMER Model Attempt"
+title: "04. GLMMs"
 format:
   html:
     theme: spacelab
@@ -73,13 +73,13 @@ First I will compare the fit and residuals of logistic regression using 'glmmTMB
 ## All Species Model Attempt
 
 ```{r}
-all_spec_re <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+(NCI_negexp)+scale(WD_mm_mean_ann_int)+stratum+
+all_spec_re <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+scale(size_ratio)+scale(WD_mm_mean_ann_int)+stratum+
                           +offset(log(census_yrs))  + (1|species) + 
                             (1|plotid),
                family = binomial(link = "cloglog"),
                data = trees_new)
 
-all_spec_fe <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+stratum+(NCI_negexp)+scale(WD_mm_mean_ann_int)
+all_spec_fe <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+stratum+(size_ratio)+scale(WD_mm_mean_ann_int)
                           +offset(log(census_yrs))  + species + 
                             (1|plotid),
                family = binomial(link = "cloglog"),
@@ -175,7 +175,7 @@ fagus_can_null <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
 *Comp added*
 ````{r}
 fagus_can_comp <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
-                          scale(NCI_negexp)+
+                          scale(size_ratio)+
                           offset(log(census_yrs))  +
                           (1|plotid),
                family = binomial(link = "cloglog"),
@@ -185,7 +185,7 @@ fagus_can_comp <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
 *Clim added*
 ```{r}
 fagus_can_clim <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
-                            scale(NCI_negexp) +
+                            scale(size_ratio) +
                             scale(terra_WB_mm_ann) *
                             scale(temp_k_mean_ann_int)+
                             offset(log(census_yrs))  +
@@ -194,7 +194,7 @@ fagus_can_clim <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
                data = trees_FAGUS_can)
 
 fagus_can_clim_wd <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
-                            scale(NCI_negexp) +
+                            scale(size_ratio) +
                             scale(terra_WB_mm_ann) +
                             offset(log(census_yrs))  +
                             (1|plotid),
@@ -216,7 +216,7 @@ summary(fagus_can_clim_wd)
 *No temp*
 ```{r}
 fagus_can_noint <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
-                            scale(NCI_negexp)+
+                            scale(size_ratio)+
                             scale(terra_WB_mm_ann) + 
                             #  scale(ppt_diff)+
                             scale(temp_k_mean_ann_int)+
@@ -289,7 +289,7 @@ fagus_sup_null <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
 *Comp added*
 ````{r}
 fagus_sup_comp <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
-                          scale(NCI_negexp)+
+                          scale(size_ratio)+
                           offset(log(census_yrs))  +
                           (1|plotid),
                family = binomial(link = "cloglog"),
@@ -299,7 +299,7 @@ fagus_sup_comp <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
 *Clim added*
 ```{r}
 fagus_sup_clim <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
-                            scale(NCI_negexp) +
+                            scale(size_ratio) +
                             scale(terra_WB_mm_ann) *
                             scale(temp_k_mean_ann_int)+
                             offset(log(census_yrs))  +
@@ -308,7 +308,7 @@ fagus_sup_clim <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
                data = trees_FAGUS_sup)
 
 fagus_sup_clim_wd <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
-                            scale(NCI_negexp) +
+                            scale(size_ratio) +
                             scale(WD_mm_mean_ann_int) +
 #scale(WD_diff)+ 
                             offset(log(census_yrs))  +
@@ -317,7 +317,7 @@ fagus_sup_clim_wd <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
                data = trees_FAGUS_sup)
 
 fagus_sup_clim_wd_diff <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
-                            scale(NCI_negexp) +
+                            scale(size_ratio) +
                             scale(WD_mm_mean_ann_int) +
 scale(WD_diff)+
                             offset(log(census_yrs))  +
@@ -340,7 +340,7 @@ summary(fagus_sup_clim_wd_diff)
 *No temp*
 ```{r}
 fagus_sup_noint <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
-                            scale(NCI_negexp) +
+                            scale(size_ratio) +
                             scale(ppt_mm_ann_int) + 
                             scale(temp_k_mean_ann_int)+
                             offset(log(census_yrs))  +
@@ -350,7 +350,7 @@ fagus_sup_noint <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
                data = trees_FAGUS_sup)
 
 fagus_sup_clim_notemp <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+
-                          scale(NCI_negexp)+
+                          scale(size_ratio)+
                           scale(ppt_mm_ann_int) +
                           offset(log(census_yrs))  +
                         
@@ -399,7 +399,7 @@ ppt_mm
 
 # Model WITHOUT plot-level random effect
 fagus_mod_noplot <- glmmTMB(
-  mort ~ scale(poly(dbh_mm, 2)) + NCI_negexp + scale(WD_mm_mean_seas_int) +
+  mort ~ scale(poly(dbh_mm, 2)) + size_ratio + scale(WD_mm_mean_seas_int) +
     offset(log(census_yrs)),
   family = binomial(link = "cloglog"),
   data = trees_FAGUS_up
@@ -423,19 +423,19 @@ testSpatialAutocorrelation(sim_res_plot,
 corrplot(cor(trees_new$))
 cor(trees_FAGUS_up$WD_mm_mean_ann_int,trees_FAGUS_up$temp_k_mean_seas_int)
 
-fagus_mod_null <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+(NCI_negexp)+offset(log(census_yrs))  +(1|plotid),
+fagus_mod_null <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+(size_ratio)+offset(log(census_yrs))  +(1|plotid),
                family = binomial(link = "cloglog"),
                data = trees_FAGUS_up)
 
 #vif(fagus_mod_null)
 
-fagus_mod_clim <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+(NCI_negexp)+scale(WD_mm_mean_ann_int)+
+fagus_mod_clim <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+(size_ratio)+scale(WD_mm_mean_ann_int)+
                           +offset(log(census_yrs))  +
                             (1|plotid),
                family = binomial(link = "cloglog"),
                data = trees_FAGUS_up)
 
-fagus_mod_clim_site <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+(NCI_norm)+scale(size_ratio) +  
+fagus_mod_clim_site <- glmmTMB(mort ~ scale(poly(dbh_mm,2))+(size_ratio)+scale(size_ratio) +  
                                  scale(WD_mm_mean_ann_int) + 
                           +offset(log(census_yrs))  +
                             (1|plotid),
@@ -495,7 +495,7 @@ fagus_gam_clim1 <- gam(
 
 fagus_gam_clim2 <- gam(
   mort ~ s(dbh_mm, k = 4) +              # smooth of DBH (k controls wiggliness)
-         s(NCI_negexp, k=4) + 
+         s(size_ratio, k=4) + 
          WD_mm_mean_ann_int +  #  water deficit - doesn't need smooth
          s(plotid, bs = "re") +          # random effect for plot
          offset(log(census_yrs)),
