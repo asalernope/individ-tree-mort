@@ -90,7 +90,7 @@ for(i in 1:length(survey_dates$plotid) )
   
   	# subset climate data to census interval
   	dat.plot.int <- subset(clim_df, year>=start_yr &
-  								year<=(end_yr-3) & # add 5 years to it
+  								year<=(end_yr-3) & # add 3 years to it
   								plotid %in% p )
   
   ### calculate mean climate for census interval

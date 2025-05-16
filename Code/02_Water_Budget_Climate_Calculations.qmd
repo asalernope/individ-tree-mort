@@ -20,7 +20,7 @@ rm(list=ls())
 computer <- "~"
 #  directores
 if(computer == "~"){
-  Dir.Base <- "~/Desktop/Prague/mort-likelihood/individ-tree-mort"
+  Dir.Base <- "~/Desktop/Prague/mort-likelihood/individ-tree-mort/"
 }else{
   Dir.Base <- "insert path"
 }
@@ -361,7 +361,7 @@ ref_clim <- plot_clim %>%
 
 clim_anom <- plot_clim %>%
   inner_join(., survey_dates, by = "plotid") %>%
-  filter(year >= (date_census_1-5), year <= date_census_2,    
+  filter(year >= (date_census_1-3), year <= date_census_2,    
          Month %in% c("Apr", "May", "Jun", "Jul", "Aug")) %>%
   left_join(ref_clim, by = c("Month","plotid")) %>%
   mutate(
@@ -392,7 +392,7 @@ clim_anom <- plot_clim %>%
   
 save(clim_anom,file=file.path(Dir.Clim,"TRY_climate_anom.Rdata"))
 
-load(file=file.path(Dir.Clim,"TRY_climate_anom.Rdata"))
+#load(file=file.path(Dir.Clim,"TRY_climate_anom.Rdata"))
 
 
 ```

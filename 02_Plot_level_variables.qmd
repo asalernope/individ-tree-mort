@@ -7,6 +7,14 @@ format:
     number-sections: true
 ---
 
+
+*Additional calculations*
+
+Below is the calculation for plot level basal area (corrected for plot size), a measure indicative of plot development, and relative basal area of the individual compared to the mean basal area of trees within a plot, a measure of size dominance. Dominance of plot level species is also calculated on a basal area measure. For additional information on these calculations check Taccoen et al. (2021).
+
+Additionally, following the climate evolution variable in Taccoen et al. 2021, we will also calculate a evolving climate variable for temperature (mean seasonal) and for climatic water balance. 
+
+
 **All trees present in census 1 and 2**
 ```{r}
 librarian::shelf(lme4, dplyr, tidyverse, ggplot2, nlme, car, sjPlot, GGally,DHARMa,pROC, glmmTMB, pool)
@@ -50,8 +58,10 @@ plot.id.collect <- tbl(KELuser, "plot") %>%
          !is.na(lng),
          !is.na(lat)) %>%
  filter(!location %in% c("Fagaras", "Maramures")) %>%
-  select(plotid, plotsize) %>%
-collect()
+  select(plotid, plotsize, slope, aspect, hillform) %>%
+collect()  %>%
+  mutate(aspect_beers = 1+cos(45-aspect),
+         prod = ifelse((aspect > 90 & aspect <= 270), 'south', 'north'))
 ```
 
 #### Tree ID
@@ -119,7 +129,7 @@ age_tree_all <- data.age %>%
 ```{r}
 trees_ba <-  full_trees %>%
   filter(!onplot %in% 0) %>%
-#  inner_join(.,plot.id.collect, by = "plotid") %>%
+# inner_join(.,plot.id.collect, by = "plotid") %>%
    filter(
     lord1 %in% "live")%>%
   #        !stand %in% c("Risnjak")) %>%
@@ -128,14 +138,14 @@ trees_ba <-  full_trees %>%
   mutate(plot_ba = sum(ba_m2),
          mean_tree_ba = mean(ba_m2),
          coefvar = mean(dbh_mm)/sd(dbh_mm)) %>%
-     #    tree_density = n()/plotsize*10000)   %>%
+      #  tree_density = n()/plotsize*10000)  # %>%
   ungroup() %>%
-  select(plotid, treeid, sp_group_dist, ba_m2, plot_ba, mean_tree_ba, coefvar, aspect, slope, altitude_m #tree_density,
-         )  %>%
+  select(plotid, treeid, sp_group_dist, ba_m2, plot_ba, mean_tree_ba, coefvar, slope, aspect, altitude_m #tree_density,
+         ) %>%
   mutate(
          aspect_beers = 1+cos(45-aspect),
          prod = ifelse((aspect > 90 & aspect <= 270), 'south', 'north'))
-  
+
 #cor(trees_ba$tree_density, trees_ba$plot_ba)
 
 unique(trees$stand)
