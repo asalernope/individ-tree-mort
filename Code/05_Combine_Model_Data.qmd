@@ -38,7 +38,7 @@ for(index in 1:length(Dir_list))   # using loop instead of sapply
 
 ```{r}
 ### get tree plot data
-load("~/Desktop/Prague/mort-likelihood/Data/8_Trees_with_mortality.Rdata")
+load("~/Desktop/Prague/mort-likelihood/individ-tree-mort/Data/8_Trees_with_mortality.Rdata")
 targets$plotid <- as.factor(targets$plotid)
 str(targets)  # n=198 plotids
 ```

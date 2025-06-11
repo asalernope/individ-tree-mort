@@ -34,7 +34,7 @@ dirs <- sapply(c(Dir.Base, Dir.Data, Dir.Code, Dir.Clim), function(x) if(!dir.ex
 
 ```{r}
 # read tree dataset
-targets <- load("~/Desktop/Prague/mort-likelihood/Data/full_trees.Rdata")
+targets <- load("~/Desktop/Prague/mort-likelihood/individ-tree-mort/Data/full_trees.Rdata")
 targets<-get(targets)
 head(targets)
 ```
@@ -89,8 +89,8 @@ for(i in 1:length(survey_dates$plotid) )
   end_yr <- survey_dates$date_census_2[which(survey_dates$plotid %in% p)]
   
   	# subset climate data to census interval
-  	dat.plot.int <- subset(clim_df, year>=start_yr &
-  								year<=(end_yr-3) & # add 3 years to it
+  	dat.plot.int <- subset(clim_df, year>=start_yr-2 &
+  								year<= end_yr & # add 2 years to it
   								plotid %in% p )
   
   ### calculate mean climate for census interval
@@ -156,6 +156,14 @@ for(i in 1:length(survey_dates$plotid) )
 plot_clim <- do.call(rbind,clim_array)
 
 #summary(plot_clim)
+
+plot_clim <- plot_clim %>%
+  mutate(WD_ann_diff = WD_mm_mean_ann_int - WD_mm_mean_ann_ant,
+    ppt_ann_diff = ppt_mm_ann_int - ppt_mm_ann_ant,
+    temp_mean_ann_diff = temp_k_mean_ann_int - temp_k_mean_ann_ant,
+    WD_ann_perc = ((WD_ann_diff/WD_mm_mean_ann_ant))*100,
+    ppt_ann_perc = ((ppt_ann_diff/ppt_mm_ann_ant))*100,
+    temp_mean_ann_perc = (temp_mean_ann_diff/temp_k_mean_ann_ant)*100)
 
 # save census interval climate
 save(plot_clim,file=file.path(Dir.Clim,"6_plot_mean_census_climate.Rdata"))

@@ -1,0 +1,924 @@
+---
+title: "05. GAMs"
+format:
+  html:
+    theme: spacelab
+    toc: true
+    number-sections: true
+---
+
+# Overview
+
+This is a simpler modeling approach for individual tree mortality in the Balkan Region. This utilizes the data put together from Arne and I. The goal is to understand the relationship of individual mortality to size, species, competition, climate, and disturbance history. To achieve this goal, trees and plots with evidence of catastrophic or large scale disturbance are excluded. 
+
+*To do* 
+need to edit the code to only include trees the same size as or larger for the competition calculation
+*Libraries*
+```{r}
+librarian::shelf(lme4, dplyr, tidyverse, ggplot2, car, sjPlot, GGally,DHARMa,pROC, glmmTMB, mgcv,fixest,gratia, corrplot, pool, broom, GGally)
+```
+
+*Data*
+```{r}
+load("~/Desktop/Prague/mort-likelihood/individ-tree-mort/Data/9_Trees_with_derived_climate_variables.Rdata")
+load("~/Desktop/Prague/mort-likelihood/individ-tree-mort/Data/Combined_Targets_with_NCI.Rdata")
+```
+
+```{r}
+# Connect to the database
+KELuser <- dbPool(RPostgreSQL::PostgreSQL(),
+                    dbname = 'remoteforestsorg',
+                  host = '91.239.201.14',
+                  port = 4010,
+                  user = 'remoteforests002',
+                  password = 'COVBtxQ5')
+
+
+# trees %>%
+#   select(mort, country, location, stand, plotid, treeid, growth, stratum, dbh_cm, genus, SPCD, date_census_1, date_census_2, census_yrs, )
+```
+
+#### First-census plot_id
+
+```{r}
+plot.id.collect <- tbl(KELuser, "plot") %>%
+  filter(ownership %in% 1,
+          country %in% c("Albania", "Bosnia","Croatia"), #,"Bulgaria", "Romania"
+         foresttype %in% c("beech"),
+        plottype %in% c(3, 4),
+         census %in% 1,
+         !is.na(lng),
+         !is.na(lat)) %>%
+ filter(!location %in% c("Fagaras", "Maramures")) %>%
+  select(plotid, slope, aspect, hillform) %>%
+collect() 
+
+poolClose(KELuser)
+remove(KELuser)
+```
+
+
+```{r}
+trees_new <- all_targets %>%
+  inner_join(., plot.id.collect, by = "plotid") %>%
+    mutate(
+    growth = as.factor(ifelse(growth %in% 1, "canopy", "suppressed")),
+    plotid =as.factor(plotid),
+    #aspect_beers = 1+cos(45-aspect),
+   # prod = ifelse((aspect > 90 & aspect <= 270), 'south', 'north'),
+    temp_k_mean_ann_int = temp_k_mean_ann_int - 273,
+    dbh_cm = dbh_mm/10,
+    dbh_cm_S = scale(dbh_cm),
+    WD_mm_mean_ann_int_S = scale(WD_mm_mean_ann_int),
+      WD_mm_mean_ann_ant_S = scale(WD_mm_mean_ann_ant),
+   NCI_S = scale(NCI),
+   NCI_bigger_S = scale(NCI_bigger),
+   temp_k_mean_ann_int_S = scale(temp_k_mean_ann_int),
+   WD_ann_perc_S = scale(WD_ann_perc),
+   NCI_same_prop = NCI_same/NCI, 
+    NCI_others_prop = NCI_other/NCI, 
+   genus = as.factor(sp_group_dist)) %>%
+  filter(NCI_norm < 0.4)
+```
+
+# Predictor correlation check
+
+```{r}
+corr_check <- trees_new %>% select(WD_mm_mean_ann_int, WD_ann_diff, temp_k_mean_ann_int, NCI_bigger, NCI, dbh_cm, genus, growth, mort) %>%
+  filter(genus %in% "Fagus")
+
+
+GGally::ggpairs(corr_check, aes(color = growth), alpha = 0.6)
+
+```
+
+
+# Fagus & Abies only - 
+
+## No interaction + interaction by species
+
+Due to sample size constraints, Picea and Acer are excluded from these more complex models (with interactions) due to the sample size being in the hundreds rather than thousands. Simpler models with the other two are tested below.
+
+```{r}
+trees_new_simp <- trees_new %>%
+   filter(!genus %in% c("Others", "Acer", "Picea"))
+
+# Base model
+M0 <- gam(mort ~ genus + 
+            s(dbh_cm_S) +
+            s(NCI_S) + 
+            s(WD_mm_mean_ann_int_S)+
+            s(plotid, bs = "re") +    
+            offset(log(census_yrs)),
+            method = "REML",
+            family = binomial(link = "logit"), 
+            data = trees_new_simp)
+
+# Q1
+M1 <- gam(mort ~ genus + 
+            s(dbh_cm_S) +
+            s(WD_mm_mean_ann_int_S)+
+            s(NCI_S, by = genus) +
+            s(plotid, bs = "re") +    
+            offset(log(census_yrs)),
+            method = "REML",
+            family = binomial(link = "logit"), 
+            data = trees_new_simp)
+
+# Q2
+M2 <- gam(mort ~ genus + 
+            s(dbh_cm_S, by = genus, k = 3) +
+            s(WD_mm_mean_ann_int_S, by = genus)+
+            s(NCI_S, by = genus) +
+            s(plotid, bs = "re") +    
+            offset(log(census_yrs)),
+            method = "REML",
+            family = binomial(link = "logit"), 
+            data = trees_new_simp)
+
+# Q3
+M3 <- gam(mort ~ genus + 
+            s(dbh_cm_S, by = genus) +
+            s(WD_mm_mean_ann_int_S, by = genus)+
+            s(NCI_S, by = genus) +
+            ti(NCI_S, WD_mm_mean_ann_int_S, by = genus) +
+            s(plotid, bs = "re") +    
+            offset(log(census_yrs)),
+            method = "REML",
+            family = binomial(link = "logit"), 
+            data = trees_new_simp)
+```
+
+
+*Model assessment*
+```{r}
+anova(M0,M1,M2,M3)
+AIC(M0,M1,M2,M3)
+
+summary(M2)
+
+trees_new$predicted_prob <- predict(M2, type = "response")
+
+roc_obj <- roc(trees_new$mort, trees_new$predicted_prob)
+auc(roc_obj)
+plot(roc_obj) # decent fit
+```
+
+DBH - too wiggly
+WD and NCI - linear relationship with genus - should these be out of smoother? 
+
+## Dual interaction between status and genus
+
+*Explanation of smoothers for myself*
+
+s - smooth function: both same unit and same scale
+s(x1, by = x2) - can be one continuous and one factor (numeric or character) - include factor as main effect in the model 
+                 one smoothed continuous and one linear variable continuous - effect of x2 varies with x1
+s(x1, x2)      - two continuous (both smoothed),
+ 
+te - not same scale and when interactions include main effects
+ti - best for not same scale and for surfaces that do not include main effects - include main effects separately for this one as ti? 
+
+Editing these functions
+ - k-dimension: wiggliness of the smooth; complexity reflected in EDF
+ - basis function: default for s is thin plate regression spline; te and ti default is cubic regression spline (cr) - change to cs for shrinkage
+
+* When using te() and ti() basis function - set the parameter d - which specifies that predictors in the interaction are on the same scale or dimension. - For example, in te(Time, width, height, d=c(1,2)), indicates that width and height are one the same scale, but not Time. *
+
+
+ti: https://stat.ethz.ch/R-manual/R-devel/library/mgcv/html/te.html 
+
+    
+```{r}
+M4 <- gam(mort ~ genus +
+            s(dbh_cm_S, by = interaction(genus, stratum)) +
+            s(WD_mm_mean_ann_int_S, by = interaction(genus, stratum),  bs = "ts")+
+            s(NCI_S, by = interaction(genus, stratum),  k = 3) +
+            s(plotid, bs = "re") +    
+            offset(log(census_yrs)),
+            method = "REML",
+            family = binomial(link = "logit"), 
+            data = trees_new)
+draw(M4)
+summary(M4)
+
+M5 <- gam(mort ~ genus + 
+            s(dbh_cm_S, by = interaction(genus, stratum)) +
+            s(WD_mm_mean_ann_int_S, by = interaction(genus, stratum),  bs = "ts")+
+            s(NCI_S, by = interaction(genus, stratum), k = 3) +
+            ti(NCI_S, WD_mm_mean_ann_int_S, by = interaction(genus, stratum)) +
+            s(plotid, bs = "re") +    
+            offset(log(census_yrs)),
+            method = "REML",
+            family = binomial(link = "logit"), 
+            data = trees_new)
+
+M6 <- gam(mort ~ genus +
+            s(dbh_cm_S, by = interaction(genus, growth)) +
+            s(WD_mm_mean_ann_int_S, by = interaction(genus, growth),  bs = "ts")+
+            s(NCI_S, by = interaction(genus, growth), k = 3) +
+            s(plotid, bs = "re") +    
+            offset(log(census_yrs)),
+            method = "REML",
+            family = binomial(link = "logit"), 
+            data = trees_new)
+
+summary(M6)
+
+M6A <- gam(mort ~ genus +
+          #  WD_mm_mean_ann_int_S+
+            s(dbh_cm_S, by = interaction(genus, growth)) +
+            s(WD_ann_perc, by = interaction(genus, growth),  bs = "ts")+
+          #  s(temp_k_mean_ann_int_S, by = interaction(genus, growth),  bs = "ts", k = 3)+
+            s(NCI_S, by = interaction(genus, growth)) +
+            s(plotid, bs = "re") +    
+            offset(log(census_yrs)),
+            method = "REML",
+            family = binomial(link = "cloglog"), 
+            data = trees_new)
+
+M6B <- gam(mort ~ genus +
+            ti(WD_mm_mean_ann_ant, WD_ann_perc, by = interaction(genus, growth)) +
+            s(WD_ann_perc, by = interaction(genus, growth),  bs = "ts")+
+            s(dbh_cm, by = interaction(genus, growth)) +
+              s(WD_mm_mean_ann_ant, by = interaction(genus, growth),  bs = "ts")+
+            s(NCI, by = interaction(genus, growth)) +
+            s(plotid, bs = "re") +    
+            offset(log(census_yrs)),
+            method = "REML",
+            family = binomial(link = "logit"), 
+            data = trees_new)
+
+draw(M6B)
+summary(M6A)
+summary(M6B)
+AIC(M6, M6A, M6B)
+
+
+M7 <- gam(mort ~ genus + 
+            s(dbh_cm_S, by = interaction(genus, growth)) +
+            s(WD_mm_mean_ann_int_S, by = interaction(genus, growth), bs = "ts")+
+            s(NCI_S, by = interaction(genus, stratum), k = 3) +
+            ti(NCI_S, WD_mm_mean_ann_int_S, by = interaction(genus, growth)) +
+            s(plotid, bs = "re") +    
+            offset(log(census_yrs)),
+            method = "REML",
+            family = binomial(link = "cloglog"), 
+            data = trees_new)
+
+
+tree <- glmmTMB(mort ~
+            WD_mm_mean_ann_ant_S*WD_ann_perc +
+             WD_mm_mean_ann_ant_S +
+            NCI_S*dbh_cm_S +
+            (1|plotid) +  
+            offset(log(census_yrs)),
+            family = binomial(link = "cloglog"), 
+            data = trees_new)
+
+summary(tree)
+```
+
+
+
+```{r}
+anova(M0,M1,M2,M3, M4, M5, M6, M7)
+AIC(M0,M1,M2,M3, M4, M5, M6, M7)
+
+summary(M6)
+draw(M5)
+```
+
+
+# Fagus
+
+```{r}
+trees_FAGUS <- trees_new %>%
+  filter(sp_group_dist %in% "Fagus")
+```
+
+## Initial Models
+
+```{r}
+m0 <- gam(
+  mort ~ s(dbh_cm_S) + 
+         s(NCI_S) +
+         s(WD_mm_mean_ann_int_S, bs = "ts") +
+         s(temp_k_mean_ann_int_S) + 
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "logit"),
+  data = trees_FAGUS,
+  method = "REML"
+)
+
+summary(m0)
+
+m1 <- gam(
+  mort ~ growth+
+         s(dbh_cm_S, by = growth, bs = "cs") + 
+         s(NCI_S, by = growth) +
+         s(WD_mm_mean_ann_int_S, by = growth, bs = "ts") +
+         s(temp_k_mean_ann_int_S, by = growth) + 
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "logit"),
+  data = trees_FAGUS,
+  method = "REML"
+)
+
+summary(m1)
+
+m2 <- gam(
+  mort ~ growth+
+         s(dbh_cm_S, by = growth, bs = "cs") + 
+         s(NCI_S, by = growth) +
+         s(WD_mm_mean_ann_int_S, by = growth, bs = "ts") +
+         s(temp_k_mean_ann_int_S, by = growth) + 
+         ti(NCI_S, WD_mm_mean_ann_int_S, by = growth) +
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "logit"),
+  data = trees_FAGUS,
+  method = "REML"
+)
+
+summary(m2)
+
+AIC(m0,m1,m2)
+```
+
+## Competition from bigger trees? 
+```{r}
+m3 <- bam(
+  mort ~ growth+
+         s(dbh_cm, by = growth, bs = "cs") + 
+         #s(NCI_bigger, by = growth, k = 3) +
+     s(NCI_norm, by = growth, k = 3) +
+        
+         s(WD_mm_mean_ann_int, by = growth, bs = "ts") +
+         s(temp_k_mean_ann_int, by = growth, k = 3) + 
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "logit"),
+  data = trees_FAGUS,
+  method = "fREML"
+)
+
+m3C <- bam(
+  mort ~ growth+
+         s(dbh_cm, by = growth, bs = "cs") + 
+         #s(NCI_bigger, by = growth, k = 3) +
+     s(NCI_norm, by = growth, k = 3) +
+        ti(NCI_norm, dbh_cm)+
+         s(WD_mm_mean_ann_int, by = growth, bs = "ts") +
+       #  s(temp_k_mean_ann_int, by = growth, k = 3) + 
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "logit"),
+  data = trees_FAGUS,
+  method = "fREML"
+)
+
+summary(m3C)
+# m3cloglog <- gam(
+#   mort ~ growth+
+#          s(dbh_cm_S, by = growth, bs = "cs") + 
+#          s(NCI_bigger_S, by = growth, k = 3) +
+#          s(WD_mm_mean_ann_int_S, by = growth, bs = "ts") +
+#          s(temp_k_mean_ann_int_S, by = growth, k = 3) + 
+#          s(plotid, bs = "re") +    
+#          offset(log(census_yrs)),
+#   family = binomial(link = "cloglog"),
+#   data = trees_FAGUS,
+#   method = "REML"
+# )
+# 
+# AIC(m3, m3cloglog)
+
+summary(m3)
+m3A <- gam(
+  mort ~ growth+
+         s(dbh_cm_S, by = growth, bs = "cs") + 
+         s(NCI_bigger_S, by = growth, k = 3) +
+         s(WD_mm_mean_ann_int_S, by = growth, bs = "ts") +
+         s(temp_k_mean_ann_int_S, by = growth, k = 3) + 
+         ti(NCI_bigger_S, WD_mm_mean_ann_int_S) +
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "logit"),
+  data = trees_FAGUS,
+  method = "REML"
+)
+
+m3B <- gam(
+  mort ~ growth+
+         s(dbh_cm_S, by = growth, k = 3) + 
+         s(NCI_norm, by = growth, k = 3) +
+         s(WD_mm_mean_ann_int_S, by = growth, bs = "ts") +
+         s(temp_k_mean_ann_int_S, by = growth, k = 3) + 
+         ti(NCI_bigger_S, WD_mm_mean_ann_int_S) +
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "logit"),
+  data = trees_FAGUS,
+  method = "REML"
+)
+
+summary(m3)
+draw(m3)
+AIC(m1,m3, m3A, m3B)
+```
+
+## Does identity of competitor matter more?
+
+```{r}
+m4 <- gam(
+  mort ~ growth+
+         s(dbh_cm_S, by = growth) + 
+         s(NCI_S, by = growth) +
+         s(WD_mm_mean_ann_int_S, by = growth, bs = "ts") +
+         s(temp_k_mean_ann_int_S, by = growth) + 
+         s(NCI_same_prop, by = growth) +
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "logit"),
+  data = trees_FAGUS,
+  method = "REML"
+)
+
+m5 <- gam(
+  mort ~ growth+
+         s(dbh_cm_S, by = growth) + 
+         s(NCI_S, by = growth) +
+         s(WD_mm_mean_ann_int_S, by = growth, bs = "ts") +
+         s(temp_k_mean_ann_int_S, by = growth) + 
+         s(NCI_others_prop, by = growth) +
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "logit"),
+  data = trees_FAGUS,
+  method = "REML"
+)
+
+AIC(m1,m3,m3A, m4,m5)
+```
+
+## Residuals for m3
+
+```{r}
+sim_res <- simulateResiduals(m3, plot = TRUE) # not clean investigate 
+
+
+sim_res_plot <- recalculateResiduals(sim_res, group = trees_FAGUS$plotid)
+
+# Now test at the plot level
+plot_coords <- unique(trees_FAGUS[, c("plotid", "lng", "lat")])
+testSpatialAutocorrelation(sim_res_plot,
+                           x = plot_coords$lng,
+                           y = plot_coords$lat)
+
+plotResiduals(sim_res, trees_FAGUS$dbh_cm_S)
+plotResiduals(sim_res, trees_FAGUS$NCI_S)
+plotResiduals(sim_res, trees_FAGUS$WD_mm_mean_ann_int_S)
+plotResiduals(sim_res, trees_FAGUS$plotid)
+```
+
+## Plotted output from m3
+
+```{r}
+# dbh
+visreg(m3, "dbh_cm", by = "growth", scale = "response", main = "Effect of dbh_cm on Mortality Probability by Growth")
+
+# nci
+visreg(m3, "NCI_bigger", by = "growth", scale = "response", main = "Effect of NCI_bigger on Mortality Probability by Growth")
+
+visreg(m3C, "NCI_norm", by = "growth", scale = "response", main = "Effect of NCI_norm on Mortality Probability by Growth")
+
+# wd
+visreg(m3C, "WD_mm_mean_ann_int", by = "growth", scale = "response", main = "Effect of WD_mm_mean_ann_int on Mortality Probability by Growth")
+
+# temp
+visreg(m3C, "temp_k_mean_ann_int", by = "growth", scale = "response", main = "Effect of temp_k_mean_ann_int on Mortality Probability by Growth")
+
+# plotid
+visreg(m3, "plotid", scale = "response", main = "Effect of plotid on Mortality Probability")
+```
+
+
+```{r}
+cor(trees_FAGUS$NCI_bigger_S,trees_FAGUS$NCI_S)
+
+summary(m1)
+summary(m2)
+AIC(m1,m2)
+
+table(trees_FAGUS$growth, trees_FAGUS$stratum)
+
+m2 <- gam(
+  mort ~ s(dbh_cm_S, by = growth) + 
+         NCI_S+
+         s(WD_mm_mean_ann_int_S, by = growth) +
+        # s(temp_k_mean_ann_int_S, by = growth) + 
+    ti(NCI_S, WD_mm_mean_ann_int_S) +
+       # s(BA_prop_ABIALB, by = growth)+
+      #  s(BA_prop_FAGSYL, by = growth)+
+       # s(BA_prop_PICABI, by = growth)+
+        s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "cloglog"),
+  data = trees_FAGUS,
+  method = "REML"
+)
+
+draw(m3)
+
+
+# plot neighbour dbh effect
+quartz(height=6,width=6)
+plot.gam(m3,select=4,scale=0,las=1,lwd=2,rug=FALSE, shade=TRUE,shade.col=gray(.9))
+
+
+BIC(m1,m2)
+
+summary(m2)
+```
+
+## Models
+
+*NO interaction*
+```{r}
+m1 <- gam(
+  mort ~ s(dbh_cm_S, by = growth, k =3) + 
+         s(NCI_S, by = growth) +
+         (WD_mm_mean_ann_int_S, by = growth) +
+         (temp_k_mean_ann_int_S, by = growth) + 
+      # NCI_others_prop+ #tested whether the identity of the neighbor matter - con and hetero neighbors didn't matter - total does
+        s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "cloglog"),
+  data = trees_FAGUS_upper,
+  method = "REML"
+)
+
+summary(m1)
+  # sample_frac(0.90)
+# 
+# # 10% testing set (optional)
+# trees_test <- anti_join(trees_FAGUS_can, trees_train)
+```
+
+```{r}
+summary(m1)
+
+deviance(m1) / m1$df.residual
+
+draw(m1)
+
+
+
+sim_res <- simulateResiduals(m1, plot = TRUE)
+
+
+sim_res_plot <- recalculateResiduals(sim_res, group = trees_FAGUS_upper$plotid)
+
+# Now test at the plot level
+plot_coords <- unique(trees_FAGUS_upper[, c("plotid", "lng", "lat")])
+testSpatialAutocorrelation(sim_res_plot,
+                           x = plot_coords$lng,
+                           y = plot_coords$lat)
+
+
+
+plotResiduals(sim_res, trees_FAGUS_upper$dbh_cm)
+plotResiduals(sim_res, trees_FAGUS_upper$NCI)
+plotResiduals(sim_res, trees_FAGUS_upper$WD_mm_mean_ann_int)
+plotResiduals(sim_res, trees_FAGUS_upper$plotid)
+
+
+tidy(m1, parametric = TRUE)
+
+# Extract parametric (linear) terms
+param_terms <- tidy(m1, parametric = TRUE)
+
+# Plot estimates with confidence intervals
+ggplot(param_terms, aes(x = term, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = estimate - 1.96 * std.error, ymax = estimate + 1.96 * std.error), width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray") +
+  labs(x = "Term", y = "Estimate", title = "Parametric (Linear) Terms from GAM") +
+  theme_minimal()
+
+newdata <- trees_FAGUS_upper
+newdata <- newdata[complete.cases(newdata), ]
+
+# Create a sequence over the variable of interest
+newdata_seq <- data.frame(
+  NCI = mean(newdata$NCI, na.rm = TRUE),
+  WD_mm_mean_ann_int =  seq(min(newdata$WD_mm_mean_ann_int), max(newdata$WD_mm_mean_ann_int), length.out = 100),
+  dbh_cm = mean(newdata$dbh_cm, na.rm = TRUE),
+  plotid = newdata$plotid[1],  # pick any one to satisfy the random effect
+  census_yrs = mean(newdata$census_yrs, na.rm = TRUE),
+  mort = 0  # dummy
+)
+
+# Predict
+newdata_seq$pred <- predict(fagus_gam, newdata = newdata_seq, type = "response")
+
+# Plot
+ggplot(newdata_seq, aes(x = NCI, y = pred)) +
+  geom_line() +
+  labs(x = "NCI_norm", y = "Predicted Mortality", title = "Effect of NCI_norm") +
+  theme_minimal()
+
+
+```
+
+*Interaction - between NCI & WD*
+```{r}
+m5 <- gam(
+  mort ~  s(dbh_cm_S, k =3) +
+         NCI_S +
+         WD_mm_mean_ann_int_S +
+      #  temp_k_mean_ann_int_S +
+        ti(NCI_S,dbh_cm_S)+
+        s(plotid, bs = "re") +    
+        offset(log(census_yrs)),
+  family = binomial(link = "cloglog"),
+  data = trees_FAGUS_upper,
+  method = "REML"
+)
+
+draw(m2)
+
+gam.check(m2)
+summary(m5)
+
+deviance(m2) / m2$df.residual
+
+
+
+```
+
+**Model Checks** 
+```{r}
+AIC(m1,m2,m5)
+BIC(m1,m2)
+anova(m1,m2)
+```
+
+*WD - Percentage change*
+```{r}
+m3<- gam(
+  mort ~ s(dbh_cm) + 
+         s(NCI_S) +
+         s(WD_mm_mean_ann_int_S) +
+      #   ti(WD_mm_mean_ann_int_S, WD_ann_perc) +
+    
+     #    te(time_since_dist_recent_S, my_rec_sev_S) + 
+       s(plotid, bs = "re") +  
+         offset(log(census_yrs)),
+  family = binomial(link = "cloglog"),
+  data = trees_FAGUS_upper,
+  method = "REML"
+)
+
+draw(m3, rug = TRUE)
+vis.gam(m3)
+summary(m3) 
+```
+
+```{r}
+AIC(m1,m2,m3)
+concurvity(m2, full = TRUE)
+
+cor(trees_FAGUS_upper$time_since_dist_recent_S, trees_FAGUS_upper$WD_mm_mean_ann_int_S)
+```
+
+```{r}
+
+ggplot(trees_FAGUS_upper) +
+  geom_histogram(aes(x  = NCI))
+
+
+
+
+m4<- gam(
+  mort ~ s(dbh_cm, k =3) + 
+         s(NCI) +
+         s(WD_mm_mean_ann_int) +
+         ti(WD_mm_mean_ann_int, NCI) +
+         (BA_prop_ABIALB)+
+         (BA_prop_FAGSYL)+
+         s(BA_prop_PICABI)+
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "cloglog"),
+  data = trees_FAGUS_upper,
+  method = "REML"
+)
+
+draw(m4)
+summary(m4)
+
+
+
+```
+
+
+One sided competition was found to be the strongest driver for mortality 
+*Fit Checks*
+```{r}
+summary(fagus_gam_perc)
+
+trees_FAGUS_upper$predicted_prob <- predict(m4, type = "response")
+
+roc_obj <- roc(trees_FAGUS_upper$mort, trees_FAGUS_upper$predicted_prob)
+auc(roc_obj)
+plot(roc_obj)
+
+deviance(fagus_gam) / fagus_gam$df.residual
+```
+
+
+```{r}
+
+plot(fagus_gam_layer_interaction, page = 1, scheme = 2)
+```
+
+
+# Fagus - Lower Stratum
+
+```{r}
+trees_FAGUS_lower <- trees_new %>%
+  filter(sp_group_dist %in% "Fagus",
+         stratum %in% "lower")
+```
+
+## Models 
+
+*NO interaction*
+```{r}
+m1 <- gam(
+  mort ~ s(dbh_cm) + 
+         (NCI) +
+         (WD_mm_mean_ann_int) +
+         (temp_k_mean_ann_int) + 
+         s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "cloglog"),
+  data = trees_FAGUS_lower,
+  method = "REML"
+)
+
+summary(fagus_gam)
+```
+
+*Interaction - between NCI & WD*
+```{r}
+fagus_gam_int <- gam(
+  mort ~ s((dbh_cm)) + 
+         NCI +
+         WD_mm_mean_ann_int +
+        temp_k_mean_ann_int +
+        ti(WD_mm_mean_ann_int,NCI)+
+        s(BA_prop_ABIALB)+
+        s(BA_prop_FAGSYL)+
+        s(BA_prop_PICABI)+
+        s(plotid, bs = "re") +    
+        offset(log(census_yrs)),
+  family = binomial(link = "cloglog"),
+  data = trees_FAGUS_lower,
+  method = "REML"
+)
+
+summary(fagus_gam_int)
+```
+
+**Model Checks** 
+```{r}
+AIC(fagus_gam_int,fagus_gam)
+BIC(fagus_gam_int,fagus_gam)
+anova(fagus_gam_int,fagus_gam)
+```
+
+
+
+# Abies - All - not enough data for complex gams with each layer? 
+
+```{r}
+abies <- trees_new %>%
+  filter(sp_group_dist %in% "Abies")
+
+```
+
+## Models
+
+*NO interaction*
+```{r}
+a1<- gam(
+  mort ~ s(dbh_cm, by = stratum) + 
+         NCI_norm) +
+         WD_mm_mean_ann_int +
+       #  (temp_k_mean_ann_int) + 
+      # ti(BA_prop_ABIALB, WD_mm_mean_ann_int)+
+       # ti(BA_prop_FAGSYL, WD_mm_mean_ann_int)+
+      #  ti(BA_prop_PICABI, WD_mm_mean_ann_int)+
+        s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "cloglog"),
+  data = abies,
+  method = "REML")
+
+summary(a1)
+
+a2 <- gam(
+  mort ~ s(dbh_cm, k =3) + 
+        # s(NCI_norm, by = stratum) +
+         WD_mm_mean_ann_int+
+        # temp_k_mean_ann_int + 
+        s(BA_prop_ABIALB)+
+        BA_prop_FAGSYL+
+        BA_prop_PICABI+
+        s(plotid, bs = "re") +    
+         offset(log(census_yrs)),
+  family = binomial(link = "cloglog"),
+  data = abies,
+  method = "REML"
+)
+
+summary(a2)
+
+trees_PICEA_upper$predicted_prob <- predict(picea_gam, type = "response")
+
+roc_obj <- roc(trees_PICEA_upper$mort, trees_PICEA_upper$predicted_prob)
+auc(roc_obj)
+plot(roc_obj)
+
+deviance(picea_gam) / picea_gam$df.residual
+
+draw(a1)
+
+```
+
+
+
+# Tree numbers and range info - for Tables
+
+```{r}
+trees_new %>%
+  group_by(SPCD) %>%
+  summarise(trees = n())
+
+trees_new %>%
+  group_by(SPCD) %>%
+  distinct(., species,plotid) %>%
+  summarise(n())
+
+trees_new %>%
+  group_by(SPCD, stratum,mort) %>%
+  summarise(trees = n())
+
+trees_new %>%
+  group_by(SPCD, growth, mort) %>%
+  summarise(trees = n())
+
+# trees_new %>%
+#   group_by(SPCD) %>%
+#   summarise(elev_min = min(altitude_m),
+#             elev_max = max(altitude_m),
+#             elev_mean = mean(altitude_m))
+
+# knitr::kable(trees_new %>%
+#   group_by(SPCD) %>%
+#   summarise(WD_min = min(WD_mm_mean_ann_int),
+#             WD_max = max(WD_mm_mean_ann_int),
+#             WD_mean = mean(WD_mm_mean_ann_int)), digits = 2)
+# 
+# knitr::kable(trees_new %>%
+#   group_by(SPCD) %>%
+#   summarise(temp_min = min(temp_k_mean_ann_int-273),
+#             temp_max = max(temp_k_mean_ann_int-273),
+#             temp_mean = mean(temp_k_mean_ann_int-273)), digits = 2)
+# 
+# knitr::kable(full_trees_dist %>%
+#   group_by(sp_group_dist) %>%
+#   summarise(lat_min = min(lat),
+#             lat_max = max(lat),
+#             lat_mean = mean(lat)), digits = 6)
+# 
+# knitr::kable(full_trees_dist %>%
+#   group_by(sp_group_dist, location) %>%
+#   summarise(lng_min = min(lng),
+#             lng_max = max(lng),
+#             lng_mean = mean(lng),
+#             trees = n()), digits = 6)
+
+```
+## Check Growth vs Strata in predicting
+
+Released or suppressed appears to be more predictive for mortality than canopy height in these models. The interaction of stratum vs. growth exhibit this for Beech. The opposite is true for the second most abundant species - Abies alba. I think this make sense given the variability in form of these trees. It is probably more difficult to assess suppressed or canopy for conifers given their shape than broadleaves. 
+
+
+
+

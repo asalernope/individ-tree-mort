@@ -35,7 +35,7 @@ library(tidyverse)
 ```{r}
 ### get tree plot data (filtered and expanded by Audrey)
 
-targets <- load("~/Desktop/Prague/mort-likelihood/Data/full_trees.Rdata")
+targets <- load("~/Desktop/Prague/mort-likelihood/individ-tree-mort/Data/full_trees.Rdata")
 targets<-get(targets)
 
 targets$SPCD <- as.factor(targets$SPCD)
@@ -108,7 +108,7 @@ names(clim_df)
 ```
 
 ```{r}
-load("~/Desktop/Prague/mort-likelihood/Data/8_Trees_with_mortality.Rdata")
+load("~/Desktop/Prague/mort-likelihood/individ-tree-mort/Data/8_Trees_with_mortality.Rdata")
 # targets<-get(targets)
 ```
 
