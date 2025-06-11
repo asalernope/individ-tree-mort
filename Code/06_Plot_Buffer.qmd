@@ -60,7 +60,8 @@ neighbours_df$plotid <- as.factor(neighbours_df$plotid)
 spp_table <- read_csv(file.path(Dir.Data, "Species_table.csv"))
 spp_table <- spp_table[, !names(spp_table) %in% c("Genus_nam", "Species_nam", "functional.grp", "sp_type")]
 
-# Add species code
+ # Add species code
+
 neighbours_df <- merge(neighbours_df, spp_table, by = "species", all.x = TRUE)
 neighbours_df$SPCD <- as.factor(neighbours_df$SPCD)
 
@@ -135,7 +136,7 @@ sim_neighbours <- do.call(rbind, dat_array)
 
 
 ```{r}
-summary(sim_neighbours)
+# summary(sim_neighbours)
 
 length(unique(sim_neighbours$plotid))  # 212
 length(unique(neighbours_df$plotid))   # 212
@@ -187,23 +188,18 @@ min.neighbour.dbh.cm <- 6
 neighbour_dist_max <- 15
 # min sample size of trees for growth analyses
 Nmin <- 100 
-# number of classes of wood density
 k <- 3
+
 ####################################
 
 # function to calculate distance
 neighdist <- function(targetx, targety, neighborx, neighbory) { 
 	                  sqrt((targetx-neighborx)^2 + (targety-neighbory)^2) }
 
-# Status bar
-status_bar <- function(title.txt, n, nmax)
-{ m <- paste(title.txt, ":", n,"of",nmax,"Completed")
-  barplot(height=c(n), width = c(0.25), main = m, xlim = c(0,nmax), ylim = c(0,1), horiz=T)
-}
-
 ###################################
 # get neighbour tree data
 load(file=file.path(Dir.Data,"10_Neighbour_tree_files.Rdata"))
+
 
 # drop trees with missing trait values
 unique(neighbours_df[,names(neighbours_df) %in% c("SPCD","wood_density_gcm3","SLA_cm2g_mean")] )
@@ -211,27 +207,36 @@ neighbours_df <- subset(neighbours_df, !SPCD %in% c("ANGIO","LIANS","ACEHEL") ) 
 
 
 # load target tree data
-# load target tree data
 load(file=file.path(Dir.Data,"9_Trees_with_derived_climate_variables.Rdata"))
 
 # Calculate tree distance to plot centre
 trees$DIST_m <- neighdist(trees$x_m, trees$y_m, 0, 0)
 trees$dbh_cm <- trees$dbh_mm/10
 
+trees <- trees %>%
+  mutate(SPCD_full = SPCD,
+         SPCD = as.character(SPCD),
+         SPCD = as.factor(ifelse(SPCD %in% c("ABIALB", "FAGSYL", "PICABI", "ACEPSE"), SPCD, "OTHERS"))
+         )
+         
+neighbours_df <- neighbours_df %>% mutate(SPCD_full = SPCD,
+         SPCD = as.character(SPCD),
+         SPCD = as.factor(ifelse(SPCD %in% c("ABIALB", "FAGSYL", "PICABI", "ACEPSE"), SPCD, "OTHERS"))
+         )
 
 # select focal species with minimum number of samples
 spp_list <- sort(table(trees$SPCD),decreasing = TRUE)
 top_species <- spp_list[which(spp_list > Nmin)]
 
-
 ###################################
 # loop through selected species and collect neighbour data matrices
+all_targets <- data.frame()
 
 for(index in 1:length(top_species)) {
-  
+
   spname <- names(top_species[index])
   targets <- subset(trees, SPCD == spname &
-                      dbh_cm >= min.target.dbh.cm )
+                      dbh_cm >= min.target.dbh.cm)
   targets <- droplevels(targets)
   
   # list of plots for this species
@@ -241,16 +246,15 @@ for(index in 1:length(top_species)) {
   neighbours <- subset(neighbours_df, plotid %in% target.plots)
   
   # Exclude neighbours under the minimum defined neighbour DBH
-  neighbours <- subset(neighbours, dbh_cm >= min.neighbour.dbh.cm )
+  neighbours <- subset(neighbours, dbh_cm >= min.target.dbh.cm)
   neighbours <- droplevels(neighbours)
   
+  # #############
+  # # Add neighbor classification schemes 
+  # # relatedness (conspecific, congeneric, other); add family?
   
-  #############
-  # Add neighbor classification schemes 
-  # relatedness (conspecific, congeneric, other); add family?
-  
-  neighbours$genus <- str_split(neighbours$species, boundary("word"), simplify = T)[,1]  # extract genus
-  targets$genus <- str_split(targets$species, boundary("word"), simplify = T)[,1]  
+  neighbours$genus <- neighbours$sp_group_dist
+  targets$genus <- targets$sp_group_dist
   
   neighbours$relatedness <- ifelse(neighbours$SPCD %in% targets$SPCD, "conspec", 
                                    ifelse(neighbours$genus %in% targets$genus, "congen", "other"))
@@ -264,7 +268,7 @@ for(index in 1:length(top_species)) {
   trait_class <- cbind(d,"trait_class"=kmeans.out$cluster)
   trait_class <- trait_class[order(trait_class$trait_class),]
   
-  # Check clusters
+    # Check clusters
   quartz(height=6, width=6)
   plot(SLA_cm2g_mean ~ wood_density_kgm3, data=d, col=(kmeans.out$cluster+1), xlab="Wood density (kg/m3)", ylab="SLA (cm2/g)", 
        pch=20, cex=2, las=1, main=paste0("focal = ",spname))
@@ -272,6 +276,7 @@ for(index in 1:length(top_species)) {
   # add clusters to neighbours file
   neighbours <- merge(neighbours, trait_class, by=c("SPCD", "wood_density_gcm3", "SLA_cm2g_mean"),all.x=T)
   neighbours$trait_class <- as.factor(neighbours$trait_class)
+  
   
   #############
   # generate matrices of species, distances and dbhs for neighbours
@@ -284,14 +289,13 @@ for(index in 1:length(top_species)) {
   { 
     max.neighbours <- max(max.neighbours, 
                           nrow(subset(neighbours, plotid %in% targets$plotid[m])) )
-    status_bar(paste("Calculating max neighbours for species", spname), m, nrow(targets))
   }
   # initialize matices
   distances <- matrix(0, nrow=nrow(targets), ncol=max.neighbours)
   dbhs <- matrix(0, nrow=nrow(targets), ncol=max.neighbours)
-  species <- matrix(0, nrow=nrow(targets), ncol=max.neighbours)
-  trait_clust <- matrix(0, nrow=nrow(targets), ncol=max.neighbours)
-  
+  species <- matrix(NA_character_, nrow = nrow(targets), ncol = max.neighbours)
+ trait_clust <- matrix(0, nrow=nrow(targets), ncol=max.neighbours)
+  # 
   # populate matrices
   quartz(height=2.5, width=9)
   for(i in 1:nrow(targets)) 
@@ -301,10 +305,11 @@ for(index in 1:length(top_species)) {
     distances[i,1:nrow(neighbours.for.tree)] <- neighdist(targets$x_m[i], targets$y_m[i], # using distance function                 
                                                           neighbours.for.tree$x_m, neighbours.for.tree$y_m)                                                
     dbhs[i,1:nrow(neighbours.for.tree)] <- neighbours.for.tree$dbh_cm     
-    species[i,1:nrow(neighbours.for.tree)] <- neighbours.for.tree$relatedness
-    trait_clust[i,1:nrow(neighbours.for.tree)] <- neighbours.for.tree$trait_class
+   species[i, 1:nrow(neighbours.for.tree)] <- as.character(neighbours.for.tree$SPCD)
+       trait_clust[i,1:nrow(neighbours.for.tree)] <- neighbours.for.tree$trait_class
+
   }
-  status_bar(paste("Populating neighbour matrices for", spname), i, nrow(targets))
+
   }
   
   # convert dbhs to meters for derivation of competition index
@@ -315,7 +320,7 @@ for(index in 1:length(top_species)) {
   dbhs[which(distances %in% NA)] <- NA
   distances[which(dbhs %in% NA)] <- NA
   species[which(dbhs %in% NA)] <- NA
-  trait_clust[which(dbhs %in% NA)] <- NA
+   trait_clust[which(dbhs %in% NA)] <- NA
   
   # Exclude neighbours beyond a maximum distance of a target
   for (i in 1:nrow(distances))
@@ -323,7 +328,7 @@ for(index in 1:length(top_species)) {
   distances[i,too_far] <- NA
   dbhs[i,too_far] <- NA
   species[i,too_far] <- NA
-  trait_clust[i,too_far] <- NA
+    trait_clust[i,too_far] <- NA
   }
   colnames(dbhs) <- rep("NDBH", ncol(dbhs))
   colnames(distances) <- rep("NDIST", ncol(dbhs))
@@ -331,87 +336,144 @@ for(index in 1:length(top_species)) {
   colnames(trait_clust) <- rep("NTR", ncol(dbhs))
   
   # get number of larger neighbours relative to focal tree (as a simple competition index)
-  nd <- rowSums(dbhs > (targets$dbh_cm/100),na.rm=T)
+  nd <- rowSums(dbhs > (targets$dbh_cm/100),na.rm=T) 
   
   # size ratio = average dbh of all neighbours / dbh target (Canham and Murphy 2017)
   targets$size_ratio <- rowMeans((dbhs/2)^2, na.rm=T) / (((targets$dbh_cm)/200)^2)  # dbhs are in meters
+    
+   # Parameters for NCI
+  alpha <- 2
+  beta <- 1 
+    
+  # Create mask for neighbours that should contribute
+dbh_mask <- dbhs >= (targets$dbh_cm / 100)
+
+# Apply mask to distances
+masked_distances <- distances
+masked_distances[!dbh_mask] <- NA
+
+# Now compute NCI clearly
+targets$NCI_bigger <- rowSums((dbh_mask^alpha) / (masked_distances^beta), na.rm = TRUE)
+targets$NCI_norm_bigger <- targets$NCI_bigger / max(targets$NCI_bigger, na.rm=TRUE)
+
+
+    targets$NCI <- rowSums((dbhs^alpha) / (distances^beta), na.rm = TRUE) # (targets$dbh_cm/100)
+  	targets$NCI_norm <- targets$NCI / max(targets$NCI)               #  normalize NCI I should merge all data and then normalize 
+  	
+   targets$BA_m2_15m <- rowSums((pi * (dbhs / 2)^2), na.rm = TRUE)
+
+   #### ADD THIS BLOCK #####
+
+# Initialize vectors to store NCI values
+NCI_same <- rep(NA, nrow(targets))
+NCI_other <- rep(NA, nrow(targets))
+
+# Loop over target trees
+for (i in 1:nrow(targets)) {
+  # Target species for this focal tree
+  focal_species <- targets$SPCD[i]
+  
+  # Logical masks
+  conspecific_mask <- species[i, ] == focal_species
+  heterospecific_mask <- species[i, ] != focal_species & !is.na(species[i, ])
+  
+  # DBH condition
+  dbh_mask <- (dbhs[i, ])^alpha #(targets$dbh_cm[i] / 100
+  
+  # NCI terms
+  nci_same_term <- (dbh_mask * conspecific_mask) / (distances[i, ]^beta)
+  nci_other_term <- (dbh_mask * heterospecific_mask) / (distances[i, ]^beta)
+  
+  # Sum up (ignoring NAs)
+  NCI_same[i] <- sum(nci_same_term, na.rm = TRUE)
+  NCI_other[i] <- sum(nci_other_term, na.rm = TRUE)
+}
+
+# Add to targets dataframe
+targets$NCI_same <- NCI_same
+targets$NCI_other <- NCI_other
+   
+   # Convert species matrix to character if not already
+species <- apply(species, 2, as.character)
+
+# Get unique species codes
+unique_species <- unique(as.vector(species))
+unique_species <- unique_species[!is.na(unique_species)]
+
+neighbor_ba <- (pi * (dbhs / 2)^2)  # in m²
+
+# Initialize a data frame to store species-specific proportions
+ba_prop_by_species <- data.frame(matrix(NA, nrow = nrow(dbhs), ncol = length(unique_species)))
+colnames(ba_prop_by_species) <- paste0("BA_prop_", unique_species)
+
+# Initialize a data frame to store species-specific proportions
+nci_by_species <- data.frame(matrix(NA, nrow = nrow(dbhs), ncol = length(unique_species)))
+colnames(nci_by_species) <- paste0("NCI_by_", unique_species)
+# 
+# # Calculate proportions
+# for (s in unique_species) {
+#   sp_mask <- species == s
+#   sp_ba_sum <- rowSums(neighbor_ba * sp_mask, na.rm = TRUE)
+#   total_ba <- rowSums(neighbor_ba, na.rm = TRUE)
+#   ba_prop_by_species[[paste0("BA_prop_", s)]] <- sp_ba_sum / total_ba
+#   nci_by_species[[paste0("NCI_by_", s)]] <- rowSums((dbhs >= (targets$dbh_cm/100)^alpha) / (distances^beta), na.rm = TRUE)
+#   
+# }
+
+for (s in unique_species) {
+  # Create a logical mask for the competitor species
+  sp_mask <- species == s
+  
+  # Calculate basal area proportion for species s
+  sp_ba_sum <- rowSums(neighbor_ba * sp_mask, na.rm = TRUE)
+  total_ba <- rowSums(neighbor_ba, na.rm = TRUE)
+  ba_prop_by_species[[paste0("BA_prop_", s)]] <- sp_ba_sum / total_ba
+
+  # Calculate NCI for species s competitors only
+  dbh_mask <- (dbhs^alpha) #(targets$dbh_cm / 100))^alpha)  # condition on size
+  nci_term <- (dbh_mask * sp_mask) / (distances^beta)  # apply species filter here
+  nci_by_species[[paste0("NCI_by_", s)]] <- rowSums(nci_term, na.rm = TRUE)
+}
+
+all_spcd_levels <- c("ABIALB", "FAGSYL", "PICABI", "ACEPSE","OTHERS")
+standard_species_cols <- paste0("BA_prop_", all_spcd_levels)
+standard_species_cols_NCI <- paste0("NCI_by_", all_spcd_levels)
+
+  # Fill in any missing species columns with NA to match master set
+  missing_cols <- setdiff(standard_species_cols, colnames(ba_prop_by_species))
+  for (col in missing_cols) {
+    ba_prop_by_species[[col]] <- NA
+  }
+  
+  # Fill in any missing species columns with NA to match master set
+  missing_cols <- setdiff(standard_species_cols_NCI, colnames(nci_by_species))
+  for (col in missing_cols) {
+    nci_by_species[[col]] <- NA
+  }
+
+  
+
+  
+  # Reorder columns to match standard
+  ba_prop_by_species <- ba_prop_by_species[, standard_species_cols]
+   nci_by_species <- nci_by_species[, standard_species_cols_NCI]
+   
+   
+  # Combine proportions into targets
+  targets <- cbind(targets, ba_prop_by_species, nci_by_species)
+ 
+  all_targets <- rbind(all_targets, targets)  # Append to master data frame
   
   # save
   setwd(Dir.Analysis.Files)
   save(targets,neighbours,distances,dbhs,species,trait_clust,nd,trait_class,kmeans.out,
        file=paste(spname,"Full_working_dataset_with_all_climate_variables.Rdata",sep="_"))
   
+
+  save(all_targets, file=file.path(Dir.Data, "Combined_Targets_with_NCI.Rdata"))
+  
+  
 } # species loop
 
-```
-
-```{r}
-# Calculate NCI for each individual 
-	
-	# focal species
-	spp_list <- c("ABIALB","FAGSYL","PICABI","ACEPSE")
-	
-	# select focal species
-	index <- 2
-	spname <- spp_list[index]
-	
-	# get model fitting data including neighbour matrices from step 11
-	filename <- "Full_working_dataset_with_all_climate_variables.Rdata"
-	load(file=file.path(Dir.Analysis.Files, paste(spname,filename,sep="_")))
-	
-	
-	# compute NCI assuming alpha = 2 beta = 1
-	alpha = 2
-	beta = 1
-	targets$NCI <- rowSums((dbhs^alpha)/(distances^beta), na.rm=T)
-	targets$NCI_norm <- targets$NCI / max(targets$NCI)               #  normalize NCI I should merge all data and then normalize
-	targets$NCI_negexp <- exp(-1 * targets$size_ratio * targets$NCI/max(targets$NCI ))  #  NCI fit to exponential function
-	targets$BA_m2_15m <- rowSums((pi*(dbhs/2)^2), na.rm=T)   # sum of neighbour basal area within 15 m
-	
-	summary(targets)
-
-	
-# List of focal species
-spp_list <- c("ABIALB", "FAGSYL", "PICABI", "ACEPSE")
-filename <- "Full_working_dataset_with_all_climate_variables.Rdata"
-
-# Placeholder for all species data
-all_targets <- data.frame()
-
-# Loop through each species
-for (spname in spp_list) {
-  
-  # Load the data
-  load(file = file.path(Dir.Analysis.Files, paste(spname, filename, sep = "_")))
-  
-  # Parameters for NCI
-  alpha <- 2
-  beta <- 1
-  
-  # Compute NCI and basal area
-  targets$NCI <- rowSums((dbhs^alpha) / (distances^beta), na.rm = TRUE)
-  	targets$NCI_norm <- targets$NCI / max(targets$NCI)               #  normalize NCI I should merge all data and then normalize
-	targets$NCI_negexp <- exp(-1 * targets$size_ratio * targets$NCI/max(targets$NCI ))  #  NCI fit to exponential function
-  targets$BA_m2_15m <- rowSums((pi * (dbhs / 2)^2), na.rm = TRUE)
-  
-  # Add species identifier
-  targets$species <- spname
-  
-  # Combine into the master dataset
-  all_targets <- rbind(all_targets, targets)
-}
-
-# # Normalize NCI across all species
-# all_targets$NCI_norm <- all_targets$NCI / max(all_targets$NCI, na.rm = TRUE)
-# 
-# # Exponential decay using normalized NCI and size_ratio
-# all_targets$NCI_negexp <- exp(-1 * all_targets$size_ratio * all_targets$NCI_norm)
-
-# View summary
-summary(all_targets)
-
-# Optional: save to file
-
-save(all_targets, file=file.path(Dir.Data, "11_Combined_Targets_with_NCI.Rdata"))
 ```
 
